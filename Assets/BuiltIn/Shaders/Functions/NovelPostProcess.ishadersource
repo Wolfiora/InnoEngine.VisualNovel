@@ -1,0 +1,152 @@
+// Inputs are premultiplied images; all full-screen operations preserve that convention.
+// Screen kinds 0..9, transitions 100..105, blends 200..201 and coverage masks 210..213.
+vec4 Evaluate(vec2 uv, vec4 tint, sampler2D s_current, sampler2D s_previous,
+    vec4 u_config, vec4 u_parameters, vec4 u_color, vec4 u_size)
+{
+    vec2 sampleUv = vec2(uv.x, u_size.z > 0.5 ? 1.0 - uv.y : uv.y);
+    vec4 source = texture2D(s_current, sampleUv);
+    vec4 previous = texture2D(s_previous, sampleUv);
+    vec4 result = source;
+    float amount = clamp(u_config.y, 0.0, 1.0);
+    if (u_config.x > 209.5)
+    {
+        float coverage = previous.a;
+        if (u_config.x > 210.5 && u_config.x < 211.5 || u_config.x > 212.5)
+            coverage = dot(previous.rgb, vec3(0.2126, 0.7152, 0.0722));
+        if (u_config.x > 211.5) coverage = 1.0 - coverage;
+        result = source * clamp(coverage, 0.0, 1.0);
+    }
+    else if (u_config.x > 199.5)
+    {
+        float alpha = min(1.0, source.a + previous.a);
+        vec3 color = source.rgb + previous.rgb;
+        if (u_config.x > 200.5)
+        {
+            alpha = source.a + previous.a * (1.0 - source.a);
+            color = source.rgb * (1.0 - previous.a) + previous.rgb * (1.0 - source.a) + source.rgb * previous.rgb;
+        }
+        result = vec4(clamp(color, vec3(0.0, 0.0, 0.0), vec3(alpha, alpha, alpha)), alpha);
+    }
+    else if (u_config.x > 99.5)
+    {
+        float kind = u_config.x - 100.0;
+        if (amount <= 0.0) result = previous;
+        else if (amount >= 1.0) result = source;
+        else if (kind < 0.5)
+            result = amount < 0.5 ? mix(previous, u_color, amount * 2.0) : mix(u_color, source, amount * 2.0 - 1.0);
+        else if (kind < 1.5) result = mix(previous, source, amount);
+        else
+        {
+            vec2 direction = vec2(cos(u_parameters.x), sin(u_parameters.x));
+            float soft = max(0.00001, u_parameters.y);
+            float mask = 0.0;
+            if (kind < 2.5)
+            {
+                float extent = max(0.00001, abs(direction.x) + abs(direction.y));
+                float position = dot(uv - vec2(0.5, 0.5), direction) / extent + 0.5;
+                mask = 1.0 - smoothstep(amount - soft, amount + soft, position);
+            }
+            else if (kind < 3.5)
+            {
+                float threshold = 0.0;
+                if (u_config.z < 0.5)
+                    threshold = fract(sin(dot(floor(uv * vec2(64.0, 36.0)), vec2(12.9898, 78.233)) + u_size.w * 97.0) * 43758.5453);
+                else if (u_config.z < 1.5)
+                {
+                    vec2 cells = uv * vec2(12.0, 8.0);
+                    float parity = mod(floor(cells.x) + floor(cells.y), 2.0);
+                    threshold = parity * 0.5 + max(abs(fract(cells.x) - 0.5), abs(fract(cells.y) - 0.5));
+                }
+                else if (u_config.z < 2.5) threshold = fract(uv.y * 12.0);
+                else threshold = (abs(uv.x - 0.5) + abs(uv.y - 0.5));
+                mask = 1.0 - smoothstep(amount - soft, amount + soft, threshold);
+            }
+            else if (kind < 4.5)
+            {
+                vec2 oldUv = uv - direction * amount;
+                vec2 newUv = uv + direction * (1.0 - amount);
+                float oldInside = step(0.0, oldUv.x) * step(oldUv.x, 1.0) * step(0.0, oldUv.y) * step(oldUv.y, 1.0);
+                float newInside = step(0.0, newUv.x) * step(newUv.x, 1.0) * step(0.0, newUv.y) * step(newUv.y, 1.0);
+                oldUv.y = u_size.z > 0.5 ? 1.0 - oldUv.y : oldUv.y;
+                newUv.y = u_size.z > 0.5 ? 1.0 - newUv.y : newUv.y;
+                vec4 oldImage = texture2D(s_previous, oldUv) * oldInside;
+                vec4 newImage = texture2D(s_current, newUv) * newInside;
+                result = newImage + oldImage * (1.0 - newImage.a);
+            }
+            else
+            {
+                vec2 center = u_parameters.zw;
+                float aspect = u_size.x / max(1.0, u_size.y);
+                vec2 distanceVector = (uv - center) * vec2(aspect, 1.0);
+                vec2 farthest = max(center, vec2(1.0, 1.0) - center) * vec2(aspect, 1.0);
+                float distance = length(distanceVector) / max(0.00001, length(farthest));
+                mask = u_config.w > 0.5 ? smoothstep(1.0 - amount - soft, 1.0 - amount + soft, distance)
+                    : 1.0 - smoothstep(amount - soft, amount + soft, distance);
+            }
+            if (kind < 3.5 || kind > 4.5) result = mix(previous, source, mask);
+        }
+    }
+    else if (u_config.x > -0.5)
+    {
+        vec3 straight = source.rgb / max(source.a, 0.00001);
+        if (u_config.x < 0.5)
+        {
+            vec2 stepUv = vec2(u_parameters.y, u_parameters.z) * u_parameters.x / max(u_size.xy, vec2(1.0, 1.0));
+            vec4 blurred = source * 0.2270270270;
+            blurred += texture2D(s_current, sampleUv + stepUv * 1.3846153846) * 0.3162162162;
+            blurred += texture2D(s_current, sampleUv - stepUv * 1.3846153846) * 0.3162162162;
+            blurred += texture2D(s_current, sampleUv + stepUv * 3.2307692308) * 0.0702702703;
+            blurred += texture2D(s_current, sampleUv - stepUv * 3.2307692308) * 0.0702702703;
+            result = u_parameters.w > 0.5 ? mix(previous, blurred, amount) : blurred;
+        }
+        else if (u_config.x < 1.5)
+        {
+            float aspect = u_size.x / max(1.0, u_size.y);
+            float distance = length((uv - vec2(0.5, 0.5)) * vec2(aspect, 1.0)) / length(vec2(0.5 * aspect, 0.5));
+            result.rgb *= 1.0 - smoothstep(u_parameters.x, u_parameters.x + u_parameters.y, distance) * amount;
+        }
+        else if (u_config.x < 2.5)
+        {
+            float gray = dot(straight, vec3(0.2126, 0.7152, 0.0722));
+            result.rgb = mix(straight, vec3(gray, gray, gray), amount) * source.a;
+        }
+        else if (u_config.x < 3.5)
+        {
+            float gray = dot(straight, vec3(0.2126, 0.7152, 0.0722));
+            vec3 graded = (mix(vec3(gray, gray, gray), straight, u_parameters.x) - vec3(0.5, 0.5, 0.5)) * u_parameters.z + vec3(0.5 + u_parameters.y, 0.5 + u_parameters.y, 0.5 + u_parameters.y);
+            result.rgb = mix(straight, clamp(graded, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0)), amount) * source.a;
+        }
+        else if (u_config.x < 4.5)
+        {
+            vec2 cells = max(vec2(1.0, 1.0), u_size.xy / max(1.0, u_parameters.x));
+            vec2 pixelUv = (floor(sampleUv * cells) + vec2(0.5, 0.5)) / cells;
+            result = mix(source, texture2D(s_current, pixelUv), amount);
+        }
+        else if (u_config.x < 5.5)
+        {
+            vec4 flash = u_color * amount;
+            result = flash + source * (1.0 - flash.a);
+        }
+        else if (u_config.x < 6.5)
+        {
+            float edge = 1.0 - step(u_parameters.x, uv.y) * step(uv.y, 1.0 - u_parameters.x);
+            vec4 bar = u_color * amount * edge;
+            result = bar + source * (1.0 - bar.a);
+        }
+        else if (u_config.x < 7.5)
+        {
+            vec3 sepia = vec3(dot(straight, vec3(0.393, 0.769, 0.189)), dot(straight, vec3(0.349, 0.686, 0.168)), dot(straight, vec3(0.272, 0.534, 0.131)));
+            result.rgb = mix(straight, clamp(sepia, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.0)), amount) * source.a;
+        }
+        else if (u_config.x < 8.5) result.rgb = mix(straight, vec3(1.0, 1.0, 1.0) - straight, amount) * source.a;
+        else
+        {
+            vec2 offset = vec2(u_parameters.x / max(1.0, u_size.x), 0.0);
+            vec4 red = texture2D(s_current, sampleUv + offset);
+            vec4 blue = texture2D(s_current, sampleUv - offset);
+            vec3 shifted = vec3(red.r / max(red.a, 0.00001), straight.g, blue.b / max(blue.a, 0.00001));
+            result.rgb = mix(straight, shifted, amount) * source.a;
+        }
+    }
+    return result * tint;
+}

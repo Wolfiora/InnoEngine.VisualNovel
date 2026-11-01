@@ -1,0 +1,26 @@
+using Inno.VisualNovel.Model.Interface.Actions;
+using Inno.VisualNovel.Model.Values;
+using Inno.VisualNovel.Player.Interface.Actions;
+
+/// <summary>Sets an authored Game Integer page field through the ordinary native state binding.</summary>
+public sealed class SetPageCountAction : NovelUiAction
+{
+    /// <inheritdoc />
+    public override UiActionDefinition definition => new()
+    {
+        id = "custom.set-page-count",
+        title = "设置页面计数",
+        help = "将当前页面的 count 整数字段设为指定值。",
+        argument = new() { id = "argument", label = "计数", defaultValue = NovelValue.Integer(1) }
+    };
+    /// <inheritdoc />
+    public override bool IsSelected(
+        NovelUiActionContext context,
+        NovelValue argument
+    ) => context.Get("page.count").Equals(argument);
+    /// <inheritdoc />
+    public override void Execute(
+        NovelUiActionContext context,
+        NovelValue argument
+    ) => context.Set("page.count", argument);
+}

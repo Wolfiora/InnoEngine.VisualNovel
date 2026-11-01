@@ -1,0 +1,5 @@
+// One alpha-composited image, glyph or solid-color quad.
+vec4 Evaluate(vec2 uv, vec4 tint, sampler2D s_image)
+{
+    return texture2D(s_image, uv) * tint;
+}

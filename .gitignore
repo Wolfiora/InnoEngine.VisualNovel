@@ -1,0 +1,10 @@
+Library/
+Logs/
+artifacts/
+**/bin/
+**/obj/
+Inno.*.csproj
+InnoProject.sln
+editor.ini
+.vs/
+.idea/

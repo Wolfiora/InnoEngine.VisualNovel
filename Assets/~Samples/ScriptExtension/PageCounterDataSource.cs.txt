@@ -1,0 +1,36 @@
+using Inno.VisualNovel.Model.Interface.Data;
+using Inno.VisualNovel.Model.Values;
+using Inno.VisualNovel.Player.Interface.Data;
+using Inno.VisualNovel.UI.Binding;
+
+/// <summary>Exposes an existing page counter through typed editable and derived UI fields.</summary>
+public sealed class PageCounterDataSource : UiDataSource
+{
+    private readonly NovelUiDataSourceContext m_context;
+    /// <summary>Gets a new neutral schema for explicit registration and native catalog publishing.</summary>
+    public static UiDataSourceDefinition schema => new()
+    {
+        id = "counter", title = "页面计数",
+        fields = [new() { writable = true, schema = new() { id = "count", label = "计数", defaultValue = NovelValue.Integer(0) } },
+            new() { schema = new() { id = "label", label = "计数说明", defaultValue = NovelValue.String("") } }]
+    };
+    /// <summary>Uses the owner-local native context without retaining a global game instance.</summary>
+    /// <param name="context">The current game's controlled binding context.</param>
+    public PageCounterDataSource(NovelUiDataSourceContext context) { m_context = context; }
+    /// <inheritdoc />
+    public override bool TryRead(
+        string path,
+        out NovelValue value
+    ) {
+        value = path == "count" ? m_context.Get("page.count") : NovelValue.String("计数：" + m_context.Get("page.count"));
+        return path is "count" or "label";
+    }
+    /// <inheritdoc />
+    public override bool TryWrite(
+        string path,
+        NovelValue value
+    ) {
+        if (path != "count") return false;
+        m_context.Set("page.count", value); return true;
+    }
+}

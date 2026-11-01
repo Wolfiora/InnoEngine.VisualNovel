@@ -1,0 +1,35 @@
+using System;
+using System.Linq;
+using InnoEngine.Graphs;
+using Inno.VisualNovel.Authoring.Documents;
+using Inno.VisualNovel.Model.Story.Nodes.Audio;
+using InnoEditor.ImGui;
+using InnoEditor.Interactions;
+using Inno.VisualNovel.Editor.Presentation;
+using Inno.VisualNovel.Model.Audio;
+
+namespace Inno.VisualNovel.Editor.Inspection;
+
+internal sealed class AudioNodeSettingsView(
+    StoryInspectorFields fields,
+    EditorInteractions interactions
+)
+{
+    internal void Draw(
+        StoryDocumentsModule documents,
+        GraphNodeRecord node
+    ) {
+        AudioNode request = documents.codec.Read<AudioNode>(node);
+        string operation = request.operation.ToString();
+        string slot = request.slot;
+        string cue = request.cueId;
+        bool changed = fields.Select(node.id + "/audio/op", fields.Localize("操作"), ref operation, Enum.GetNames<AudioOperation>().Select(static name => (name, name)));
+        changed |= fields.Text(node.id + "/audio/slot", fields.Localize("逻辑槽位"), ref slot);
+        if (Enum.Parse<AudioOperation>(operation) == AudioOperation.Play) changed |= fields.Text(node.id + "/audio/cue", fields.Localize("音频资源 ID"), ref cue);
+        if (Enum.Parse<AudioOperation>(operation) == AudioOperation.Play && NovelResourceSelection.Get<AudioCueAsset>(interactions) is { } selected
+            && ImGui.Button(fields.Caption("使用所选音频：" + selected.title, fields.Localize("使用所选音频：") + selected.title))) { fields.Finish(); cue = selected.resourceId; changed = true; }
+        if (!changed) return;
+        request.operation = Enum.Parse<AudioOperation>(operation); request.slot = slot; request.cueId = cue;
+        documents.Edit(documents.activeDocumentId, fields.Localize("编辑音频"), state => documents.edits.SetSettings(state, node.id, request), fields.mergeKey);
+    }
+}

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1152" viewBox="0 0 600 900">
+<path d="M267 340 L333 340 L333 443 L267 443 Z" fill="#DDB99EFF" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M225 402 C180 418 142 433 125 495 L85 855 L178 880 L202 610 L200 900 L412 900 L409 610 L448 867 L526 850 L473 493 C465 445 407 411 364 403 C329 428 262 430 225 402 Z" fill="#8EA99CFF" stroke="#49443FFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M249 414 C266 449 329 449 347 414 L367 900 L235 900 Z" fill="#D8DAC2FF" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M223 409 C191 456 229 485 277 485 L300 459 L321 485 C373 485 410 450 367 407 L341 434 C309 453 275 452 250 433 Z" fill="#B8C6B2FF" stroke="#49443FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M244 692 L356 692 L380 770 L221 770 Z" fill="#78988CFF" stroke="#49443FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M270 480 L263 596 M330 480 L337 596 " fill="none" stroke="#D8DAC2FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<ellipse cx="472" cy="882.5" rx="30" ry="36.5" fill="#DDB99EFF"/>
+<ellipse cx="126.5" cy="885" rx="28.5" ry="35" fill="#DDB99EFF"/>
+<path d="M151 561 L121 809 M421 563 L478 814 " fill="none" stroke="#49443FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

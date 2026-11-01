@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>14.0</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CodeAnalysis"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.dll</HintPath></Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp"><HintPath>$(MSBuildToolsPath)/Roslyn/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath></Reference>
+    <Reference Include="System.Drawing.Common"><HintPath>$(NovelDrawingAssembly)</HintPath></Reference>
+    <Reference Include="$(NovelEngineAssemblies)/Inno.*.dll" />
+    <Reference Include="$(NovelScriptOutput)/Inno.VisualNovel.*.dll" />
+  </ItemGroup>
+  <Target Name="CheckInputs" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(NovelDrawingAssembly)')" Text="Use Generate-BuiltInResources.ps1 with the Windows PowerShell drawing runtime." />
+    <Error Condition="!Exists('$(NovelScriptOutput)/Inno.VisualNovel.Authoring.dll')" Text="Compile formal VN scripts before generating native built-in assets." />
+  </Target>
+</Project>

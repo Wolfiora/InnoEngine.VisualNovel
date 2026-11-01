@@ -1,0 +1,9 @@
+using InnoEngine.Serialization;
+
+public static class RuntimeSerializationProbe
+{
+    public static byte[] Capture(SerializationRegistry serialization)
+    {
+        return serialization.Encode(writer => writer.Write("probe", 1));
+    }
+}
