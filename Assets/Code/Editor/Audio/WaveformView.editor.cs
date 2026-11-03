@@ -23,8 +23,8 @@ internal sealed class WaveformView(StoryInspectorFields fields)
         if (clip is null || clip.metadata?.codec != AudioCodecId.wav) return null;
         if (m_clip != clip.identity.persistentId || m_version != clip.contentVersion)
         { m_clip = clip.identity.persistentId; m_version = clip.contentVersion; m_content = null; m_peaks = []; m_drag = null; }
-        if (!ImGui.CollapsingHeader(fields.Label("波形与裁剪 / Waveform"))) return null;
-        if (ImGui.Button(fields.Caption(m_content is null ? "读取波形（不播放）" : "重新读取波形", m_content is null ? fields.Localize("读取波形（不播放）") : fields.Localize("重新读取波形"))))
+        if (!ImGui.CollapsingHeader("Waveform and trim")) return null;
+        if (ImGui.Button(m_content is null ? "Read waveform (without playback)" : "Reload waveform"))
         { var content = NativeWaveformSource.Read(clip); var peaks = content.BuildPeaks(1024); m_content = content; m_peaks = peaks; m_start = 0; m_end = content.duration; }
         if (m_content is null) return null;
         float width = Math.Max(100, ImGui.GetContentRegionAvailable().X), height = 170;
@@ -48,12 +48,12 @@ internal sealed class WaveformView(StoryInspectorFields fields)
             else { m_start = Math.Min(start, time); m_end = Math.Max(start, time); }
         }
         ImGui.Dummy(size);
-        fields.Number("waveform/start", fields.Localize("裁剪起点（秒）"), ref m_start, 0, m_content.duration);
-        fields.Number("waveform/end", fields.Localize("裁剪终点（秒，排除）"), ref m_end, 0, m_content.duration);
-        EditorUiSession.current.widgets.Hint(fields.Format("{0} 声道 · {1} Hz · {2} 帧。拖动波形或输入区间；边界对齐到最近采样帧。创建新 WAV 后，可撤销提示的引用替换，原始录音保持独立。", m_content.channels, m_content.sampleRate, m_content.frameCount));
+        fields.Number("waveform/start", "Trim start (seconds)", ref m_start, 0, m_content.duration);
+        fields.Number("waveform/end", "Trim end (seconds, exclusive)", ref m_end, 0, m_content.duration);
+        EditorUiSession.current.widgets.Hint(string.Format(System.Globalization.CultureInfo.InvariantCulture,"{0} channels · {1} Hz · {2} frames. Drag the waveform or enter a range; boundaries snap to the nearest sample frame. Creating a WAV keeps the original recording. The cue's new reference can be undone.", m_content.channels, m_content.sampleRate, m_content.frameCount));
         bool valid = double.IsFinite(m_start) && double.IsFinite(m_end) && m_start >= 0 && m_end <= m_content.duration && m_end > m_start;
         ImGui.BeginDisabled(!valid);
-        try { if (ImGui.Button(fields.Label("创建裁剪副本并关联此提示"))) return NativeWaveformSource.CreateTrimmedClip(projectDirectory, m_content, m_start, m_end); }
+        try { if (ImGui.Button("Create trimmed copy and link this cue")) return NativeWaveformSource.CreateTrimmedClip(projectDirectory, m_content, m_start, m_end); }
         finally { ImGui.EndDisabled(); }
         return null;
     }

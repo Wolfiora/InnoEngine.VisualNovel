@@ -40,7 +40,7 @@ internal static class NodeCompilerContracts
         source.fragments[0].nodes = [.. source.fragments[0].nodes, "unreached"];
         var annotated = compiler.Compile(source);
         var warning = annotated.diagnostics.Single(static issue => issue.code == "VN_UNREACHABLE");
-        Check(annotated.FormatDiagnostic(warning, static message => message.Format == "该节点无法从任何入口到达。" ? "Translated warning" : "Unexpected") == "Translated warning",
+        Check(warning.message == "This node cannot be reached from any entry.",
             "Custom node lowering discarded native diagnostic presentation annotations.");
     }
     internal static void InvalidExtensionsRemainAtomic(IStorySerialization native)

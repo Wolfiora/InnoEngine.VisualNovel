@@ -16,4 +16,6 @@ public sealed record NovelProcessImage(NovelImagePlan source, NovelImagePlan pre
 {
     /// <inheritdoc />
     public override IEnumerable<NovelDrawQuad> Paints() => source.Paints().Concat(ReferenceEquals(source, previous) ? [] : previous.Paints());
+    /// <inheritdoc />
+    public override IEnumerable<NovelDrawMesh> Meshes() => source.Meshes().Concat(ReferenceEquals(source, previous) ? [] : previous.Meshes());
 }

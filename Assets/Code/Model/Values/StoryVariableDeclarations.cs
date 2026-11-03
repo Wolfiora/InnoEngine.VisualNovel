@@ -12,13 +12,13 @@ public static class StoryVariableDeclarations
     public static void Validate(VariableTableAsset table)
     {
         ArgumentNullException.ThrowIfNull(table);
-        if (table.isMissing) throw new InvalidOperationException("共享变量库不可用：" + table.assetPath);
-        if (table.title.Length > 256 || table.variables.Length > 10000) throw new InvalidOperationException("共享变量库名称或声明数量超出限制。");
+        if (table.isMissing) throw new InvalidOperationException("Shared variable library is unavailable: " + table.assetPath);
+        if (table.title.Length > 256 || table.variables.Length > 10000) throw new InvalidOperationException("The shared variable library title or declaration count exceeds its limit.");
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var variable in table.variables)
         {
             if (variable is null || !ids.Add(variable.id) || variable.scope == VariableScope.Local)
-                throw new InvalidOperationException("共享变量需要唯一身份及 Game/Global 作用域；调用局部变量属于章节。");
+                throw new InvalidOperationException("Shared variables require unique IDs and Game or Global scope; call-local variables belong to chapters.");
             VariableValueRules.Validate(variable, variable.initialValue);
         }
     }
@@ -35,7 +35,7 @@ public static class StoryVariableDeclarations
         VariableDefinition[] values = (table?.variables ?? []).Concat(chapter).ToArray();
         if (values.Length > 10000 || values.Any(static item => item is null)
             || values.Select(static item => item.id).Distinct(StringComparer.Ordinal).Count() != values.Length)
-            throw new InvalidOperationException("变量库与章节声明不能重复身份；请明确选择每项声明的归属。");
+            throw new InvalidOperationException("Library and chapter variables cannot share an ID; choose an explicit owner for each declaration.");
         foreach (var value in values) VariableValueRules.Validate(value, value.initialValue);
         return values.Select(VariableValueRules.Copy).ToArray();
     }

@@ -31,14 +31,14 @@ public sealed class StoryReorderService(
         bool after
     ) {
         var index = new StoryConnectionIndex(draft, m_catalog);
-        if (!index.Linear(node)) throw new AuthoringValidationException($"拖动指令需要一个来源、一个 next 输出，且不能是公开入口或并行边界。");
+        if (!index.Linear(node)) throw new AuthoringValidationException($"Moving a card requires one incoming connection and one next output, outside public entries and parallel boundaries.");
         if (node == target || draft.graph.document.FindNode(target) is null)
-            throw new AuthoringValidationException($"请选择不同且仍存在的目标卡片。");
+            throw new AuthoringValidationException($"Choose a different target card that still exists.");
         var edges = draft.graph.document.edges.Where(edge => after ? edge.output.nodeId == target : edge.input.nodeId == target).ToArray();
-        if (edges.Length != 1) throw new AuthoringValidationException($"目标卡片在此方向没有唯一连线；请拖到具体的执行连线。");
+        if (edges.Length != 1) throw new AuthoringValidationException($"The target has no unique connection in this direction. Drop onto a specific execution connection.");
         var destination = edges[0]; var before = index.Before(node); var next = index.After(node);
         if (destination.id == before.id || destination.id == next.id || before.output.nodeId == node || next.input.nodeId == node)
-            throw new AuthoringValidationException($"指令已经位于该连接，或连接构成自引用。");
+            throw new AuthoringValidationException($"The instruction is already on this edge, or the connection would reference itself.");
         return destination.id;
     }
     /// <summary>Previews the exact connection changes and validates a detached candidate with the production compiler.</summary>
@@ -55,7 +55,7 @@ public sealed class StoryReorderService(
         var candidate = serialization.Deserialize<StoryDraftState>(serialization.Serialize(draft));
         Rewrite(candidate.graph.document, plan);
         var result = compiler.Compile(candidate.ToAsset());
-        if (!result.success) throw new AuthoringValidationException($"移动后的剧情无法编译：{string.Join("；", result.diagnostics.Where(static item => item.severity == DiagnosticSeverity.Error).Select(static item => item.message))}");
+        if (!result.success) throw new AuthoringValidationException($"The moved story failed compilation: {string.Join("; ", result.diagnostics.Where(static item => item.severity == DiagnosticSeverity.Error).Select(static item => item.message))}");
         return plan;
     }
     /// <summary>Applies an unchanged reviewed proposal inside the caller's shared document transaction.</summary>
@@ -67,11 +67,11 @@ public sealed class StoryReorderService(
         StoryMovePlan plan,
         bool acceptBoundaryChange = false
     ) {
-        if (plan.chapter != draft.chapterId) throw new AuthoringValidationException($"移动预览属于另一个章节。");
+        if (plan.chapter != draft.chapterId) throw new AuthoringValidationException($"The move preview belongs to another chapter.");
         var current = Preview(draft, plan.node, plan.destination);
         if (current.crossesControlBoundary != plan.crossesControlBoundary || !current.changes.SequenceEqual(plan.changes))
-            throw new AuthoringValidationException($"连接已经变化，请重新预览移动结果。");
-        if (plan.crossesControlBoundary && !acceptBoundaryChange) throw new AuthoringValidationException($"跨越分支、汇合或片段的移动需要明确接受连接变化。");
+            throw new AuthoringValidationException($"Connections changed. Preview the move again.");
+        if (plan.crossesControlBoundary && !acceptBoundaryChange) throw new AuthoringValidationException($"Moving across branches, joins or fragments requires explicit acceptance of the connection changes.");
         Rewrite(draft.graph.document, current);
     }
     /// <summary>Finds the insertion connection for swapping with an adjacent ordinary instruction in the same linear segment.</summary>
@@ -97,12 +97,12 @@ public sealed class StoryReorderService(
         GraphEdgeId destination
     ) {
         var index = new StoryConnectionIndex(draft, m_catalog);
-        if (!index.Linear(node)) throw new AuthoringValidationException($"移动指令需要一个来源、一个 next 输出，且不能是公开入口或并行边界。");
+        if (!index.Linear(node)) throw new AuthoringValidationException($"The moved instruction needs one incoming edge and one next output, and must not be a public entry or parallel boundary.");
         var graph = draft.graph.document;
         var before = index.Before(node); var after = index.After(node);
-        var target = graph.edges.SingleOrDefault(edge => edge.id == destination) ?? throw new AuthoringValidationException($"目标连接已不存在。");
+        var target = graph.edges.SingleOrDefault(edge => edge.id == destination) ?? throw new AuthoringValidationException($"The destination edge no longer exists.");
         if (target.id == before.id || target.id == after.id || before.output.nodeId == node || after.input.nodeId == node)
-            throw new AuthoringValidationException($"指令已经位于该连接，或连接构成自引用。");
+            throw new AuthoringValidationException($"The instruction is already on this edge, or the connection would reference itself.");
         string fragment = index.Fragment(node);
         var segment = new HashSet<GraphEdgeId> { before.id, after.id };
         Follow(before.output.nodeId, false); Follow(after.input.nodeId, true);

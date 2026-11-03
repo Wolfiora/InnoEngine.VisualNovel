@@ -36,7 +36,7 @@ public sealed class PreviewFreshnessTracker
         m_case = Require(resources.GetStamp(caseDocument), caseDocument);
         for (int index = 0; index < m_sources.Length; index++)
             if (m_sources[index].unsaved != (m_documents[index]?.unsaved ?? false))
-                Invalidate("预览准备后的文档状态已变化：" + m_sources[index].path);
+                Invalidate("Document state changed after preview preparation: " + m_sources[index].path);
     }
     /// <summary>Gets whether any captured input has changed; undo does not silently validate an old route again.</summary>
     public bool stale { get; private set; }
@@ -73,20 +73,20 @@ public sealed class PreviewFreshnessTracker
     private void CheckOwnedDocuments()
     {
         if (m_story is not null && m_stories.GetStamp(m_story.documentId) != m_story)
-            Invalidate("预览章节已修改或关闭：" + m_story.path);
+            Invalidate("The preview chapter was changed or closed: " + m_story.path);
         if (m_case is not null && m_resources.GetStamp(m_case.documentId) != m_case)
-            Invalidate("预览用例已修改或关闭：" + m_case.path);
+            Invalidate("The preview case was changed or closed: " + m_case.path);
     }
     private void CheckSource(int index)
     {
         PreviewDraftSource captured = m_sources[index];
         var current = Assets.Load<AssetObject>(captured.assetId);
         if (current.isMissing || current.contentVersion != captured.contentVersion || current.assetPath.ToString() != captured.path)
-        { Invalidate("预览资源已重新导入、移动或缺失：" + captured.path); return; }
+        { Invalidate("The preview resource was reimported, moved or is missing: " + captured.path); return; }
         var before = m_documents[index]; var after = Stamp(AssetPath.Parse(captured.path));
         bool changed = before?.documentId == after?.documentId ? before != after
             : before?.unsaved == true || after?.unsaved == true;
-        if (changed) Invalidate("预览创作源已修改：" + captured.path);
+        if (changed) Invalidate("The preview source changed: " + captured.path);
     }
     private NativeDocumentStamp? Stamp(AssetPath path) => m_stories.GetStamp(path) ?? m_resources.GetStamp(path);
     private static NativeDocumentStamp? Require(

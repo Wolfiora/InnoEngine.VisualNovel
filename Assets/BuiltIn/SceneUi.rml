@@ -1,0 +1,13 @@
+<rml>
+<head>
+<style>
+@font-face { font-family: NovelInterface; src: url(Fonts/NotoSansCJKsc-Regular.otf); font-weight: 400; }
+body { margin: 0; width: 100%; height: 100%; font-family: NovelInterface; font-size: 28px; color: #ffffffff; }
+.vn-font-0 { font-family: NovelInterface; }
+#vn-scene { position: absolute; width: 100%; height: 100%; }
+button { display: block; border-width: 2px; border-color: #00000000; tab-index: auto; }
+button:focus { border-color: #b9d5ffff; }
+</style>
+</head>
+<body><div id="vn-scene"></div></body>
+</rml>

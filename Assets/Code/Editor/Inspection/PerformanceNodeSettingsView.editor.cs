@@ -29,15 +29,15 @@ internal sealed class PerformanceNodeSettingsView(
         PerformanceNode request = documents.codec.Read<PerformanceNode>(node);
         PerformanceOperation operation = request.operation;
         string id = request.instanceId, clip = request.clipId;
-        bool changed = fields.SelectEnum(node.id + "/performance/op", "操作", ref operation);
-        changed |= fields.Text(node.id + "/performance/id", fields.Localize("演出实例 ID"), ref id);
+        bool changed = fields.SelectEnum(node.id + "/performance/op", "Operation", ref operation);
+        changed |= fields.Text(node.id + "/performance/id", "Performance instance ID", ref id);
         request.operation = operation; request.instanceId = id;
         if (operation == PerformanceOperation.Play)
         {
-            if (NovelResourceSelection.Get<NovelProjectAsset>(interactions) is { } game && ImGui.Button(fields.Label("使用所选游戏的 UI / 效果目标")))
+            if (NovelResourceSelection.Get<NovelProjectAsset>(interactions) is { } game && ImGui.Button("Use UI / effect targets from selected game"))
             { m_ui = new(game); m_effects = NovelEffectPerformance.Targets(new StoryProgramLibrary(game).program, game.screenEffects); }
-            changed |= fields.Text(node.id + "/performance/clip", fields.Localize("片段资源 ID"), ref clip); request.clipId = clip;
-            if (NovelResourceSelection.Get<PerformanceClipAsset>(interactions) is { } selected && ImGui.Button(fields.Caption("使用所选片段：" + selected.displayName, fields.Localize("使用所选片段：") + selected.displayName)))
+            changed |= fields.Text(node.id + "/performance/clip", "Clip resource ID", ref clip); request.clipId = clip;
+            if (NovelResourceSelection.Get<PerformanceClipAsset>(interactions) is { } selected && ImGui.Button("Use selected clip: " + selected.displayName))
             {
                 fields.Finish(); request.clipId = selected.resourceId;
                 request.bindings = selected.tracks.Select(static track => track.target).Distinct(StringComparer.Ordinal).Select(slot =>
@@ -49,32 +49,32 @@ internal sealed class PerformanceNodeSettingsView(
             {
                 PerformanceBinding binding = request.bindings[index];
                 string slot = binding.slot, target = binding.target;
-                changed |= fields.Text(node.id + "/slot/" + index, fields.Localize("片段目标槽"), ref slot); binding.slot = slot;
-                changed |= fields.Text(node.id + "/target/" + index, fields.Localize("舞台目标 ID"), ref target); binding.target = target;
-                if (m_ui is not null) { changed |= fields.Select(node.id + "/ui-target/" + index, fields.Localize("选择 UI 目标"), ref target, m_ui.targets); binding.target = target; }
-                if (m_effects.Count > 0) { changed |= fields.Select(node.id + "/effect-target/" + index, fields.Localize("选择效果实例"), ref target, m_effects.Keys.Select(static item => (item, item))); binding.target = target; }
-                if (ImGui.Button(fields.Caption("移除此绑定##" + node.id + "/" + index, fields.Localize("移除此绑定##") + node.id + "/" + index))) { fields.Finish(); remove = index; }
+                changed |= fields.Text(node.id + "/slot/" + index, "Clip target slot", ref slot); binding.slot = slot;
+                changed |= fields.Text(node.id + "/target/" + index, "Stage target ID", ref target); binding.target = target;
+                if (m_ui is not null) { changed |= fields.Select(node.id + "/ui-target/" + index, "Choose UI target", ref target, m_ui.targets); binding.target = target; }
+                if (m_effects.Count > 0) { changed |= fields.Select(node.id + "/effect-target/" + index, "Choose effect instance", ref target, m_effects.Keys.Select(static item => (item, item))); binding.target = target; }
+                if (ImGui.Button("Remove this binding##" + node.id + "/" + index)) { fields.Finish(); remove = index; }
             }
             if (remove >= 0) { request.bindings = request.bindings.Where((_, index) => index != remove).ToArray(); changed = true; }
-            if (ImGui.Button(fields.Caption("添加目标绑定##" + node.id, fields.Localize("添加目标绑定##") + node.id)))
+            if (ImGui.Button("Add target binding##" + node.id))
             { fields.Finish(); request.bindings = [.. request.bindings, new() { slot = "actor", target = string.Empty }]; changed = true; }
-            EditorUiSession.current.widgets.Hint(fields.Localize("舞台目标使用 camera、character/实例名 或 stage/图层 ID；Volume 绑定 audio/槽位。UI 目标从所选游戏选择 ui/页面/元素，支持 X、Y、ScaleX（统一缩放）、Opacity。效果参数绑定 effect/实例，按预设机制限定可用通道。UI 元素须存在于该角色的所有主题中。位置为偏移，缩放/透明度/音量/效果强度为乘数；其余效果参数使用轨道数值。"));
+            EditorUiSession.current.widgets.Hint("Stage targets use camera, character/instance-name or stage/layer-ID; Volume binds audio/slot. Choose UI targets from the selected game as ui/screen/element, supporting X, Y, ScaleX (uniform scale) and Opacity. Effect parameters bind effect/instance, with channels limited by the preset mechanism. The UI element must exist in every theme for that screen role. Position is an offset. Scale, opacity, volume and effect intensity are multipliers; other effect parameters use the track value.");
         }
         if (operation == PerformanceOperation.Seek)
         {
             double time = request.time;
-            changed |= fields.Number(node.id + "/time", fields.Localize("逻辑秒数"), ref time, 0); request.time = time;
+            changed |= fields.Number(node.id + "/time", "Logical time (seconds)", ref time, 0); request.time = time;
         }
         if (operation == PerformanceOperation.WaitMarker)
         {
-            string marker = request.markerId; changed |= fields.Text(node.id + "/marker", fields.Localize("首次到达的标记 ID"), ref marker); request.markerId = marker;
+            string marker = request.markerId; changed |= fields.Text(node.id + "/marker", "Marker ID to wait for on first arrival", ref marker); request.markerId = marker;
             if (NovelResourceSelection.Get<PerformanceClipAsset>(interactions) is { } selected)
             {
-                changed |= fields.Select(node.id + "/marker-choice", fields.Localize("从所选片段选择标记"), ref marker, selected.markers.Select(static item => (item.id, item.name)));
+                changed |= fields.Select(node.id + "/marker-choice", "Choose marker from selected clip", ref marker, selected.markers.Select(static item => (item.id, item.name)));
                 request.markerId = marker;
             }
-            EditorUiSession.current.widgets.Hint(fields.Localize("等待该实例首次到达标记。已取消的实例立即结束等待；拖动/跳时只求值，不触发脚本或解锁。循环实例不会等待下一轮同名标记。"));
+            EditorUiSession.current.widgets.Hint("Wait for this instance's first arrival at the marker. Cancelled instances end the wait immediately. Scrubbing and seeking only evaluate presentation, without running scripts or unlocking content. A looping instance does not wait for the same marker in a later cycle.");
         }
-        if (changed) documents.Edit(documents.activeDocumentId, fields.Localize("编辑演出片段请求"), state => documents.edits.SetSettings(state, node.id, request), fields.mergeKey);
+        if (changed) documents.Edit(documents.activeDocumentId, "Edit performance clip request", state => documents.edits.SetSettings(state, node.id, request), fields.mergeKey);
     }
 }

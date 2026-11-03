@@ -46,7 +46,7 @@ public sealed class ProjectResourceAudit : IDisposable
             item.author, item.source, item.license, item.redistributionConfirmed, item.attributionRequired, item.notice, item.modifications));
         m_files = Directory.EnumerateFiles(m_sourceRoot, "*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = false,
             AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.Hidden | FileAttributes.System }).GetEnumerator();
-        if (!m_closureComplete) m_issues.Add(new(PublishIssueLevel.Pending, "VN-AUDIT-CLOSURE", closure.title, "原生内容检查存在错误；未出现于闭包的资源暂不能判定为未引用。"));
+        if (!m_closureComplete) m_issues.Add(new(PublishIssueLevel.Pending, "VN-AUDIT-CLOSURE", closure.title, "Native content validation failed; resources outside the closure cannot yet be classified as unused."));
     }
     /// <summary>Gets the number of directory entries visited, including excluded sources.</summary>
     public int visited { get; private set; }
@@ -72,7 +72,7 @@ public sealed class ProjectResourceAudit : IDisposable
                 visited++;
                 string relative = Path.GetRelativePath(m_sourceRoot, m_files.Current).Replace('\\', '/');
                 if (ResourceInventoryRules.IsExcluded(relative) || !ResourceInventoryRules.IsKnown(relative) && !m_projectPaths.Contains(relative)) continue;
-                if (m_items.Count >= 100000) { m_issues.Add(new(PublishIssueLevel.Error, "VN-AUDIT-BUDGET", m_sourceRoot, "资源候选达到 100000 项，报告不完整。")); Finish(); break; }
+                if (m_items.Count >= 100000) { m_issues.Add(new(PublishIssueLevel.Error, "VN-AUDIT-BUDGET", m_sourceRoot, "The resource scan reached its 100,000-item budget; the report is incomplete.")); Finish(); break; }
                 Probe(m_files.Current, AssetPath.Project(relative));
             }
             catch (Exception failure) when (failure is not OutOfMemoryException)
@@ -101,7 +101,7 @@ public sealed class ProjectResourceAudit : IDisposable
         Guid id = Guid.Empty; string message = string.Empty;
         try { if (Assets.TryLoad<AssetObject>(path, out var asset) && asset is not { isMissing: true } && asset is not null) id = asset.identity.persistentId; }
         catch (Exception failure) when (failure is not OutOfMemoryException) { message = failure.Message; }
-        if (id == Guid.Empty) message = "正式资产 API 尚未提供可用导入身份；只检查源文件，不判定未引用。 " + message;
+        if (id == Guid.Empty) message = "The native asset API has not provided an imported identity. Only the source is checked; unused status is unknown. " + message;
         var use = ResourceInventoryRules.IsAuthoring(path.localPath) ? ResourceAuditUse.AuthoringOnly : id == Guid.Empty ? ResourceAuditUse.Unknown
             : m_referenced.ContainsKey(id) ? ResourceAuditUse.Referenced : m_closureComplete ? ResourceAuditUse.NotReferenced : ResourceAuditUse.Unknown;
         var parents = m_referenced.TryGetValue(id, out var included) ? included.referrers : Array.Empty<string>();
@@ -116,15 +116,15 @@ public sealed class ProjectResourceAudit : IDisposable
         var info = new FileInfo(m_file);
         bool changed = !info.Exists || info.Length != m_pending!.bytes || info.LastWriteTimeUtc != m_modified;
         var item = m_pending! with { hash = changed ? "" : Convert.ToHexString(m_hash!.GetHashAndReset()), use = changed ? ResourceAuditUse.Unknown : m_pending.use,
-            message = changed ? "扫描期间源文件发生变化；重新检查后才能使用哈希及引用结论。" : m_pending.message };
+            message = changed ? "The source changed during scanning. Run the audit again before using its hash or reference results." : m_pending.message };
         m_items.Add(item);
         if (changed) m_issues.Add(new(PublishIssueLevel.Pending, "VN-AUDIT-CHANGED", item.path.ToString(), item.message));
         if (item.use == ResourceAuditUse.Referenced && m_referenced[item.id].path.source == AssetSourceId.project)
         {
             if (item.license is null || item.license.author.Length == 0 || item.license.source.Length == 0 || item.license.license.Length == 0)
-                m_issues.Add(new(PublishIssueLevel.Warning, "VN-AUDIT-LICENSE", item.path.ToString(), "资源来源、作者或许可尚未完整记录。"));
-            if (item.license is { redistributionConfirmed: false }) m_issues.Add(new(PublishIssueLevel.Pending, "VN-AUDIT-REDISTRIBUTION", item.path.ToString(), "作者尚未确认计划中的游戏分发权限。"));
-            if (item.license is { attributionRequired: true, notice.Length: 0 }) m_issues.Add(new(PublishIssueLevel.Warning, "VN-AUDIT-ATTRIBUTION", item.path.ToString(), "记录要求署名，但尚未提供署名文本。"));
+                m_issues.Add(new(PublishIssueLevel.Warning, "VN-AUDIT-LICENSE", item.path.ToString(), "The resource source, author or license record is incomplete."));
+            if (item.license is { redistributionConfirmed: false }) m_issues.Add(new(PublishIssueLevel.Pending, "VN-AUDIT-REDISTRIBUTION", item.path.ToString(), "The author has not confirmed permission for the intended game distribution."));
+            if (item.license is { attributionRequired: true, notice.Length: 0 }) m_issues.Add(new(PublishIssueLevel.Warning, "VN-AUDIT-ATTRIBUTION", item.path.ToString(), "Attribution is required, but the attribution text is missing."));
         }
         CloseFile();
     }

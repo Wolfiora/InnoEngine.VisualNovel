@@ -96,7 +96,7 @@ public sealed class NovelGameTemplateService(StoryNodeDataCodec codec)
         foreach (var variable in chapterSources.SelectMany(static chapter => chapter.variables).Where(static item => item.scope != VariableScope.Local))
         {
             if (shared.TryGetValue(variable.id, out var existing) && !StoryVariableDeclarations.Equivalent(existing, variable))
-                throw new AuthoringValidationException($"项目模板包含冲突的共享变量：{variable.id}");
+                throw new AuthoringValidationException($"The project template contains a conflicting shared variable: {variable.id}");
             shared.TryAdd(variable.id, VariableValueRules.Copy(variable));
         }
         var variableTable = Save(directory + "/Variables.ivnvariables", new VariableTableAsset { variables = shared.Values.ToArray() });
@@ -145,7 +145,7 @@ public sealed class NovelGameTemplateService(StoryNodeDataCodec codec)
     private static T Save<T>(string path, T source) where T : AssetObject
     {
         AssetPath destination = AssetPath.Project(path);
-        if (!EditorAssets.Save(destination, source)) throw new AuthoringValidationException($"原生资源导入失败：{path}。已创建资源保留，请查看引擎诊断。");
+        if (!EditorAssets.Save(destination, source)) throw new AuthoringValidationException($"Native asset import failed: {path}. Created assets were retained; inspect the engine diagnostics.");
         return Assets.Load<T>(destination);
     }
 

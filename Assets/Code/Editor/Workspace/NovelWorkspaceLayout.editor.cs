@@ -19,14 +19,14 @@ internal sealed class NovelWorkspaceLayout(
 
     internal void Header()
     {
-        Button(Mode.Writing, "写作"); ImGui.SameLine(); Button(Mode.Flow, "流程"); ImGui.SameLine();
-        Button(Mode.Performance, "演出"); ImGui.SameLine(); Button(Mode.Interface, "界面"); ImGui.SameLine(); Button(Mode.Tools, "全部工具");
-        if (ImGui.CollapsingHeader(fields.Label("角色、声音、多语言、收藏与发布")))
+        Button(Mode.Writing, "Writing"); ImGui.SameLine(); Button(Mode.Flow, "Flow"); ImGui.SameLine();
+        Button(Mode.Performance, "Presentation"); ImGui.SameLine(); Button(Mode.Interface, "Interface"); ImGui.SameLine(); Button(Mode.Tools, "All tools");
+        if (ImGui.CollapsingHeader("Characters, audio, localization, collections and publishing"))
         {
-            fields.Select("workspace/task", fields.Localize("任务入口"), ref m_task,
-                new[] { ("inno.vn.character-designer", fields.Localize("角色设计")), ("inno.vn.audio", fields.Localize("音频提示")), ("inno.vn.voices", fields.Localize("配音管理")),
-                    ("inno.vn.localization", fields.Localize("多语言")), ("inno.vn.collections", fields.Localize("收藏与鉴赏")), ("inno.vn.publishing", fields.Localize("发布检查")) });
-            if (ImGui.Button(fields.Label("打开任务面板"))) { fields.Finish(); Open(m_task); }
+            fields.Select("workspace/task", "Task", ref m_task,
+                new[] { ("inno.vn.character-designer", "Character Designer"), ("inno.vn.audio", "Audio cue"), ("inno.vn.voices", "Voice Management"),
+                    ("inno.vn.localization", "Localization"), ("inno.vn.collections", "Collections and Gallery"), ("inno.vn.publishing", "Publishing Checks") });
+            if (ImGui.Button("Open task panel")) { fields.Finish(); Open(m_task); }
         }
         if (m_error.Length > 0) EditorUiSession.current.widgets.Hint(m_error);
     }
@@ -34,16 +34,17 @@ internal sealed class NovelWorkspaceLayout(
     {
         if (mode == Mode.Performance)
         {
-            EditorUiSession.current.widgets.WrappedText(fields.Localize("演出工作区使用原生舞台、角色和时间线面板。选择对应资源后打开设计器，编辑同一份原生文档；片段仍由正式舞台/UI/音频时钟预览。面板可以使用引擎停靠与布局保存。"));
-            if (ImGui.Button(fields.Label("舞台设计"))) Open("inno.vn.stage-designer"); ImGui.SameLine();
-            if (ImGui.Button(fields.Label("演出时间线"))) Open("inno.vn.timeline"); ImGui.SameLine();
-            if (ImGui.Button(fields.Label("角色设计"))) Open("inno.vn.character-designer");
+            EditorUiSession.current.widgets.WrappedText("Build the shot in Scene and Hierarchy. Add VN image, character or particle components to real objects, then edit their properties in Inspector. Use the timeline panel for reusable clips and bind them with a VN Performance component. Game shows the current composition without starting the story.");
+            if (ImGui.Button("Scene")) Open("rendering.scene-view"); ImGui.SameLine();
+            if (ImGui.Button("Performance Timeline")) Open("inno.vn.timeline"); ImGui.SameLine();
+            if (ImGui.Button("Character Designer")) Open("inno.vn.character-designer");
         }
         else
         {
-            EditorUiSession.current.widgets.WrappedText(fields.Localize("界面工作区使用原生页面和主题设计面板。编辑页面树、画布、绑定、动作和动画；主题与页面继续共用引擎文档、选择和 History。面板位置由引擎停靠布局管理。"));
-            if (ImGui.Button(fields.Label("页面设计"))) Open("inno.vn.screen-designer"); ImGui.SameLine();
-            if (ImGui.Button(fields.Label("主题设计"))) Open("inno.vn.theme-designer");
+            EditorUiSession.current.widgets.WrappedText("Select the VN Scene System and create a UI canvas in Inspector. Add pages and controls as real child objects. Engine UI handles layout, text, focus and input; native Transform supplies author offsets. The canvas, page and layout Inspectors offer child creation buttons. Save reusable pages as native Prefabs.");
+            if (ImGui.Button("Hierarchy")) Open("scene.hierarchy"); ImGui.SameLine();
+            if (ImGui.Button("Inspector")) Open("scene.inspector"); ImGui.SameLine();
+            if (ImGui.Button("Theme Designer")) Open("inno.vn.theme-designer");
         }
     }
     internal bool DrawSplit(
@@ -58,9 +59,9 @@ internal sealed class NovelWorkspaceLayout(
             if (!ImGui.BeginTabBar("vn-compact-workspace")) return false;
             try
             {
-                Tab(mode == Mode.Writing ? "剧本" : "节点图", content);
-                Tab("故事导航", navigation); Tab("属性", properties);
-                Tab("预览", () => { previewVisible = true; preview(); });
+                Tab(mode == Mode.Writing ? "Script" : "Graph", content);
+                Tab("Story Navigation", navigation); Tab("Properties", properties);
+                Tab("Preview", () => { previewVisible = true; preview(); });
             }
             finally { ImGui.EndTabBar(); }
             return previewVisible;
@@ -68,9 +69,9 @@ internal sealed class NovelWorkspaceLayout(
         if (!ImGui.BeginTable("vn-task-workspace", 3, ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.SizingStretchProp, available)) return false;
         try
         {
-            ImGui.TableSetupColumn(fields.Localize("故事"), ImGuiTableColumnFlags.WidthStretch, .8f);
-            ImGui.TableSetupColumn(fields.Localize("内容"), ImGuiTableColumnFlags.WidthStretch, mode == Mode.Flow ? 2.8f : 2.2f);
-            ImGui.TableSetupColumn(fields.Localize("预览与属性"), ImGuiTableColumnFlags.WidthStretch, 1.4f);
+            ImGui.TableSetupColumn("Story", ImGuiTableColumnFlags.WidthStretch, .8f);
+            ImGui.TableSetupColumn("Content", ImGuiTableColumnFlags.WidthStretch, mode == Mode.Flow ? 2.8f : 2.2f);
+            ImGui.TableSetupColumn("Preview and properties", ImGuiTableColumnFlags.WidthStretch, 1.4f);
             ImGui.TableNextColumn(); Child("task-navigation", new(0, Math.Max(1, available.Y - 8)), navigation);
             ImGui.TableNextColumn(); Child("task-content", new(0, Math.Max(1, available.Y - 8)), content);
             ImGui.TableNextColumn();
@@ -85,22 +86,21 @@ internal sealed class NovelWorkspaceLayout(
         Mode target,
         string label
     ) {
-        if (!ImGui.SmallButton(fields.Caption((mode == target ? "● " : string.Empty) + label + "##workspace-" + target,
-            (mode == target ? "● " : string.Empty) + fields.Localize(label) + "##workspace-" + target))) return;
+        if (!ImGui.SmallButton((mode == target ? "● " : string.Empty) + label + "##workspace-" + target)) return;
         fields.Finish(); mode = target; m_error = string.Empty;
-        if (target == Mode.Performance) { Open("inno.vn.stage-designer"); Open("inno.vn.timeline"); }
-        else if (target == Mode.Interface) { Open("inno.vn.screen-designer"); Open("inno.vn.theme-designer"); }
+        if (target is Mode.Performance or Mode.Interface) { Open("rendering.scene-view"); Open("rendering.game-view"); Open("scene.hierarchy"); Open("scene.inspector"); }
+        if (target == Mode.Performance) Open("inno.vn.timeline");
     }
     private void Open(string panel)
     {
         fields.Finish();
-        if (!interactions.OpenPanel(panel)) m_error = fields.Localize("当前编辑器没有激活面板：") + panel + fields.Localize("。请检查正式脚本编译与插件加载诊断。");
+        if (!interactions.OpenPanel(panel)) m_error = "The editor has no active panel: " + panel + ". Check formal script compilation and plugin loading diagnostics.";
     }
     private void Tab(
         string name,
         Action draw
     ) {
-        if (!ImGui.BeginTabItem(fields.Label(name))) return;
+        if (!ImGui.BeginTabItem(name)) return;
         try { Child("compact-" + name, Vector2.Zero, draw); }
         finally { ImGui.EndTabItem(); }
     }

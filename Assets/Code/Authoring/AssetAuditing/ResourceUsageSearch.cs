@@ -56,7 +56,7 @@ public sealed class ResourceUsageSearch : IDisposable
         {
             if (byId.TryGetValue(resourceId, out var target))
                 foreach (string parent in target.referrers)
-                    if (byPath.TryGetValue(parent, out var owner)) yield return new(owner.id, owner.path, "", "", "原生资源直接引用", false);
+                    if (byPath.TryGetValue(parent, out var owner)) yield return new(owner.id, owner.path, "", "", "Direct native asset reference", false);
             foreach (var chapter in chapters)
                 foreach (var instruction in chapter.program.instructions)
                 {
@@ -76,7 +76,7 @@ public sealed class ResourceUsageSearch : IDisposable
                     { if (system.operation == SystemOperation.OpenPage) Add(screens, system.argument); if (system.operation == SystemOperation.SetTheme) Add(themes, system.argument); }
                     bool match = roots.Overlaps(containing);
                     yield return match ? new(chapter.id, chapter.path, instruction.sourceNodeId.Length > 0 ? instruction.sourceNodeId : instruction.nodeId, "",
-                        roots.Contains(resourceId) ? "剧情指令直接使用资源" : "剧情指令使用包含目标的资源库", !roots.Contains(resourceId)) : null;
+                        roots.Contains(resourceId) ? "Story instruction directly uses this resource" : "Story instruction uses a library containing this resource", !roots.Contains(resourceId)) : null;
                     void Add(
                         Dictionary<string, Guid> library,
                         string key
@@ -85,9 +85,9 @@ public sealed class ResourceUsageSearch : IDisposable
             foreach (var page in pages)
             {
                 if (Matches(page.screen.font) || page.screen.textFonts.Any(binding => Matches(binding.font)) || page.screen.textIcons.Any(binding => Matches(binding.image)))
-                    yield return new(page.id, page.path, "", page.screen.root.id, "页面字体或行内图片声明", false);
+                    yield return new(page.id, page.path, "", page.screen.root.id, "Page font or inline image declaration", false);
                 foreach (var row in ScreenEditService.Flatten(page.screen))
-                    yield return Matches(row.element.image) || Matches(row.element.font) ? new(page.id, page.path, "", row.element.id, "控件图片或字体引用", false) : null;
+                    yield return Matches(row.element.image) || Matches(row.element.font) ? new(page.id, page.path, "", row.element.id, "Control image or font reference", false) : null;
             }
         }
         bool Matches(AssetObject? asset) => asset is not null && asset.identity.persistentId == resourceId;

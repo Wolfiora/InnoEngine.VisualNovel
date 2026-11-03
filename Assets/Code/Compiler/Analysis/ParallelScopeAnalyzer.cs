@@ -28,8 +28,8 @@ internal sealed class ParallelScopeAnalyzer(StoryNodeDataCodec codec)
             ParallelNode definition = codec.Read<ParallelNode>(fork);
             if (definition.branches.Length is < 2 or > 16 || definition.branches.Any(string.IsNullOrWhiteSpace) || definition.branches.Distinct(StringComparer.Ordinal).Count() != definition.branches.Length
                 || !nodes.TryGetValue(definition.joinId, out var join) || join.definitionId != StoryNodeIds.join || codec.Read<JoinNode>(join).forkId != fork.id.value || !ownedJoins.Add(definition.joinId))
-            { Error(fork.id.value, $"并行组需要 2～16 个唯一分支和一个独占、互相匹配的汇合点。"); continue; }
-            if (story.entries.Any(entry => entry.nodeId == definition.joinId)) Error(definition.joinId, $"并行汇合点不能作为公开章节入口。");
+            { Error(fork.id.value, $"A parallel group requires 2–16 unique branches and one exclusively owned, matching join."); continue; }
+            if (story.entries.Any(entry => entry.nodeId == definition.joinId)) Error(definition.joinId, $"A parallel join cannot be a public chapter entry.");
             var occupied = new HashSet<string>(StringComparer.Ordinal);
             var resourceOwners = new Dictionary<string, string>(StringComparer.Ordinal);
             string? interactive = null;
@@ -41,41 +41,41 @@ internal sealed class ParallelScopeAnalyzer(StoryNodeDataCodec codec)
                 while (pending.TryPop(out string? id))
                 {
                     if (id == definition.joinId) { reached = true; continue; }
-                    if (id == fork.id.value) { Error(id, $"并行分支不能在汇合前返回自己的起点。"); continue; }
+                    if (id == fork.id.value) { Error(id, $"A parallel branch cannot return to its own fork before joining."); continue; }
                     if (!members.Add(id) || !nodes.TryGetValue(id, out var node)) continue;
                     if (outgoing.TryGetValue(id, out var edges)) foreach (var edge in edges) pending.Push(edge.input.nodeId.value);
                     if (node.definitionId is StoryNodeIds.system or StoryNodeIds.unlock or StoryNodeIds.call or StoryNodeIds.returnFromCall or StoryNodeIds.end)
-                        Error(id, $"并行分支中的页面切换、解锁、跨章节调用或提前结束需放在汇合后。");
+                        Error(id, $"Place page changes, unlocks, cross-chapter calls and early completion after the parallel join.");
                     if (node.definitionId == StoryNodeIds.command)
                     {
                         CommandNode command = codec.Read<CommandNode>(node);
                         if (command.resultVariable.Length > 0 || command.definition.capabilities.HasFlag(CommandCapabilities.ExternalEffects)
                             || !command.definition.capabilities.HasFlag(CommandCapabilities.Save | CommandCapabilities.Rollback))
-                            Error(id, $"并行扩展必须可保存、可回滚、没有外部副作用且不写剧情结果变量。");
+                            Error(id, $"A parallel extension must support saving and rollback, have no external effects and not write a narrative result variable.");
                     }
                 }
-                if (!reached) Error(fork.id.value, $"并行分支没有通向所属汇合点的路径：{branch}");
+                if (!reached) Error(fork.id.value, $"The parallel branch has no path to its own join: {branch}");
                 bool inputOwner = members.Any(id => nodes.TryGetValue(id, out var member)
                     && (member.definitionId is StoryNodeIds.dialogue or StoryNodeIds.choice or StoryNodeIds.input
                         || member.definitionId == StoryNodeIds.wait && codec.Read<WaitNode>(member).waitForInput));
-                if (inputOwner && interactive is not null) Error(fork.id.value, $"并行组只允许一个分支拥有对白、选项或玩家输入焦点：{interactive} / {branch}");
+                if (inputOwner && interactive is not null) Error(fork.id.value, $"Only one parallel branch can own dialogue, choices or player input focus: {interactive} / {branch}");
                 if (inputOwner) interactive = branch;
                 foreach (string id in members)
                 {
-                    if (!occupied.Add(id)) Error(id, $"不同并行任务只能在所属汇合点合流。");
-                    if (story.entries.Any(entryPoint => entryPoint.nodeId == id)) Error(id, $"并行内部节点不能同时作为公开章节入口。");
+                    if (!occupied.Add(id)) Error(id, $"Parallel tasks may merge only at their own join.");
+                    if (story.entries.Any(entryPoint => entryPoint.nodeId == id)) Error(id, $"An internal parallel node cannot also be a public chapter entry.");
                     foreach (var edge in incoming.GetValueOrDefault(id) ?? [])
-                        if (!members.Contains(edge.output.nodeId.value) && edge.output.nodeId != fork.id) Error(id, $"执行连接跨越了并行组或分支边界。");
+                        if (!members.Contains(edge.output.nodeId.value) && edge.output.nodeId != fork.id) Error(id, $"An execution connection crosses a parallel group or branch boundary.");
                     foreach (string resource in Writes(nodes[id]))
-                        if (resourceOwners.TryGetValue(resource, out string? owner) && owner != branch) Error(id, $"并行任务同时写入同一变量或演出目标：{resource}");
+                        if (resourceOwners.TryGetValue(resource, out string? owner) && owner != branch) Error(id, $"Parallel tasks write to the same variable or performance target: {resource}");
                         else resourceOwners[resource] = branch;
                 }
             }
             foreach (var edge in incoming.GetValueOrDefault(definition.joinId) ?? [])
-                if (!occupied.Contains(edge.output.nodeId.value) && edge.output.nodeId != fork.id) Error(definition.joinId, $"汇合点收到不属于本并行组的执行连接。");
+                if (!occupied.Contains(edge.output.nodeId.value) && edge.output.nodeId != fork.id) Error(definition.joinId, $"The join receives an execution connection from outside its parallel group.");
         }
         foreach (var join in graph.nodes.Where(static node => node.definitionId == StoryNodeIds.join))
-            if (!ownedJoins.Contains(join.id.value)) Error(join.id.value, $"汇合点缺少匹配的并行起点。");
+            if (!ownedJoins.Contains(join.id.value)) Error(join.id.value, $"The join has no matching parallel fork.");
         return issues;
         void Error(
             string id,

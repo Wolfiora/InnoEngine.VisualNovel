@@ -13,7 +13,7 @@ public sealed class ThemeAsset : AssetObject
     /// <summary>Gets or sets the stable game library key.</summary>
     [SerializableProperty] public string resourceId { get; set; } = "theme";
     /// <summary>Gets or sets the author-facing name.</summary>
-    [SerializableProperty] public string title { get; set; } = "新主题";
+    [SerializableProperty] public string title { get; set; } = "New theme";
     /// <summary>Gets or sets the theme's intended appearance and use.</summary>
     [SerializableProperty] public string description { get; set; } = string.Empty;
     /// <summary>Gets or sets the optional default page font.</summary>

@@ -10,7 +10,7 @@ namespace Inno.VisualNovel.Model.Values;
 public sealed class VariableTableAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing library title.</summary>
-    [SerializableProperty] public string title { get; set; } = "共享变量";
+    [SerializableProperty] public string title { get; set; } = "Shared variables";
     /// <summary>Gets or sets typed shared declarations; call-local values remain in chapter declarations.</summary>
     [SerializableProperty] public VariableDefinition[] variables { get; set; } = [];
     /// <summary>Copies declaration values while leaving persistent asset identity with the native source owner.</summary>

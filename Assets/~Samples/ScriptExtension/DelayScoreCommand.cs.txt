@@ -12,11 +12,11 @@ public sealed class DelayScoreCommand : NovelCommand
     /// <inheritdoc />
     public override NovelCommandDefinition definition => new()
     {
-        id = "sample.delay-score", title = "延时返回分数", help = "等待逻辑时间后返回类型化 Integer 结果，可保存与回滚。",
+        id = "sample.delay-score", title = "Delayed score", help = "Returns an Integer after a logical delay; supports saving and rollback.",
         capabilities = CommandCapabilities.Preview | CommandCapabilities.Save | CommandCapabilities.Rollback | CommandCapabilities.Cancel,
         hasResult = true, resultDefault = NovelValue.Integer(0), parameters = [
-            new() { id = "seconds", label = "等待秒数", defaultValue = NovelValue.Number(1) },
-            new() { id = "score", label = "返回分数", defaultValue = NovelValue.Integer(10) }]
+            new() { id = "seconds", label = "Wait seconds", defaultValue = NovelValue.Number(1) },
+            new() { id = "score", label = "Returned score", defaultValue = NovelValue.Integer(10) }]
     };
     /// <inheritdoc />
     public override bool Execute(
@@ -26,7 +26,7 @@ public sealed class DelayScoreCommand : NovelCommand
     ) {
         ObjectDisposedException.ThrowIf(m_disposed, this);
         double duration = context.Argument("seconds").number;
-        if (!double.IsFinite(duration) || duration < 0) throw new InvalidOperationException("等待秒数必须有限且非负。");
+        if (!double.IsFinite(duration) || duration < 0) throw new InvalidOperationException("Wait seconds must be finite and nonnegative.");
         if (state.elapsed < duration) return false;
         context.Return(context.Argument("score")); return true;
     }
@@ -34,7 +34,7 @@ public sealed class DelayScoreCommand : NovelCommand
     public override void PrepareRestore(NovelCommandState state)
     {
         ObjectDisposedException.ThrowIf(m_disposed, this);
-        if (!state.started || !double.IsFinite(state.elapsed) || state.elapsed < 0) throw new InvalidOperationException("延时指令状态无效。");
+        if (!state.started || !double.IsFinite(state.elapsed) || state.elapsed < 0) throw new InvalidOperationException("Invalid delayed-command state.");
     }
     /// <inheritdoc />
     public override void Cancel(NovelCommandState state) => m_disposed = true;

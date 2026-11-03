@@ -12,7 +12,7 @@ public sealed class StageAsset : AssetObject
     /// <summary>Gets or sets the stable resource key used by story commands.</summary>
     [SerializableProperty] public string resourceId { get; set; } = "stage";
     /// <summary>Gets or sets the display name.</summary>
-    [SerializableProperty] public string title { get; set; } = "新舞台";
+    [SerializableProperty] public string title { get; set; } = "New stage";
     /// <summary>Gets or sets design width.</summary>
     [SerializableProperty] public double width { get; set; } = 1920;
     /// <summary>Gets or sets design height.</summary>

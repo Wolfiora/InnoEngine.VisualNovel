@@ -111,8 +111,8 @@ internal static class NativeArtifactContracts
             var edited = Inno.VisualNovel.UI.Documents.UiDefinitionCopy.Copy(editable); edited.title += " changed";
             Check(EditorAssets.Save(editable.assetPath, edited), "Could not prepare a changed native batch source.");
             Check(stale.Advance() && stale.error.Length > 0 && stale.completed == 0 && stale.created.Count == 0
-                && stale.failure is Authoring.Diagnostics.AuthoringValidationException { source: "源资源在批量准备后已改变、移动或缺失，请重新选择：{0}" } cause
-                && cause.arguments.Single()?.ToString() == editable.assetPath.ToString(), "A changed native preset escaped its frozen batch revision, lost presentation arguments or created a partial root.");
+                && stale.failure is Authoring.Diagnostics.AuthoringValidationException cause
+                && cause.Message.Contains(editable.assetPath.ToString(), StringComparison.Ordinal), "A changed native preset escaped its frozen batch revision, lost presentation arguments or created a partial root.");
             bool duplicates = false;
             try { _ = new Authoring.BuiltInResources.BuiltInResourceCopyBatch([page, page]); } catch (ArgumentException) { duplicates = true; }
             Check(duplicates, "A batch accepted duplicate native input identities before review.");

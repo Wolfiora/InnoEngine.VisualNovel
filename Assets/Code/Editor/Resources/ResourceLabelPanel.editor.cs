@@ -14,7 +14,7 @@ using Inno.VisualNovel.Editor.Presentation;
 namespace Inno.VisualNovel.Editor.Resources;
 
 /// <summary>Organizes explicitly selected native resources through ordinary annotation documents and engine History.</summary>
-[EditorPanel("inno.vn.resource-labels", "VN 资源整理 · Resource Labels", order: 469, menuPath: "Authoring")]
+[EditorPanel("inno.vn.resource-labels", "VN Resource Labels", order: 469, defaultOpen: false, menuPath: "Authoring")]
 public sealed class ResourceLabelPanel : EditorPanel, IEditorPanelReloadState
 {
     private readonly ResourceDocumentsModule m_documents;
@@ -44,7 +44,7 @@ public sealed class ResourceLabelPanel : EditorPanel, IEditorPanelReloadState
     protected override void OnDraw(EditorContext context)
     {
         m_fields.BeginFrame();
-        try { Draw(); } catch (Exception failure) when (failure is not OutOfMemoryException) { m_message = m_fields.Error(failure); }
+        try { Draw(); } catch (Exception failure) when (failure is not OutOfMemoryException) { m_message = (failure).Message; }
         finally { m_fields.EndFrame(); }
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
     }
@@ -58,7 +58,7 @@ public sealed class ResourceLabelPanel : EditorPanel, IEditorPanelReloadState
     { m_document = Guid.Empty; m_revision = -1; m_selected.Clear(); m_filtered = []; m_search = m_cachedSearch = m_cachedGroup = m_message = ""; m_group = "all"; m_page = 0; m_batch.Reset(); }
     private void Draw()
     {
-        if (!m_toolbar.Draw<ResourceLabelCatalogAsset>("资源整理", ".ivnlabels", static () => new(), out var catalog) || catalog is null) return;
+        if (!m_toolbar.Draw<ResourceLabelCatalogAsset>("Resource annotations", ".ivnlabels", static () => new(), out var catalog) || catalog is null) return;
         if (m_document != m_toolbar.documentId) { Reset(); m_document = m_toolbar.documentId; }
         ImGui.PushId(m_document.ToString("N"));
         try { DrawCatalog(catalog); }
@@ -66,24 +66,24 @@ public sealed class ResourceLabelPanel : EditorPanel, IEditorPanelReloadState
     }
     private void DrawCatalog(ResourceLabelCatalogAsset catalog)
     {
-        EditorUiSession.current.widgets.Hint(m_fields.Localize("选择 File Browser 中的原生资源后收录。分类、标签和说明属于创作记录，资源加载与身份由引擎维护。标签每行一个；分发游戏不包含本目录。"));
+        EditorUiSession.current.widgets.Hint("Select a native resource in File Browser, then add it. Categories, tags and descriptions are authoring notes; the engine owns resource loading and identity. Enter one tag per line. This catalog is excluded from game content.");
         string title = catalog.title;
-        if (m_fields.Text("labels/title", "目录标题", ref title))
-        { m_documents.Edit<ResourceLabelCatalogAsset>(m_document, m_fields.Localize("编辑资源整理标题"), value => value.title = title, m_fields.mergeKey); }
-        if (ImGui.Button(m_fields.Label("收录所选资源")))
+        if (m_fields.Text("labels/title", "Catalog title", ref title))
+        { m_documents.Edit<ResourceLabelCatalogAsset>(m_document, "Edit resource annotation title", value => value.title = title, m_fields.mergeKey); }
+        if (ImGui.Button("Add selected resource"))
         {
-            var asset = NovelResourceSelection.Get<AssetObject>(m_interactions) ?? throw new InvalidOperationException(m_fields.Localize("在 File Browser 选择已导入资源。"));
-            m_fields.Finish(); m_documents.Edit<ResourceLabelCatalogAsset>(m_document, m_fields.Localize("收录资源整理记录"), candidate => ResourceLabelEditService.Set(candidate,
+            var asset = NovelResourceSelection.Get<AssetObject>(m_interactions) ?? throw new InvalidOperationException("Select an imported resource in File Browser.");
+            m_fields.Finish(); m_documents.Edit<ResourceLabelCatalogAsset>(m_document, "Add resource annotation", candidate => ResourceLabelEditService.Set(candidate,
                 candidate.entries.SingleOrDefault(entry => entry.asset?.identity.persistentId == asset.identity.persistentId)?.Copy() ?? new() { asset = asset }));
             m_message = string.Empty; return;
         }
-        if (ImGui.InputText(m_fields.Label("查找路径 / 分类 / 标签 / 说明"), ref m_search, 4096)) m_page = 0;
-        var groups = new[] { ("all", m_fields.Localize("全部分类")), ("empty", m_fields.Localize("未分类")) }
+        if (ImGui.InputText("Search path / category / tags / description", ref m_search, 4096)) m_page = 0;
+        var groups = new[] { ("all", "All categories"), ("empty", "Ungrouped") }
             .Concat(catalog.entries.Select(static entry => entry.group).Where(static group => group.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)
                 .Select(static group => ("group/" + group, group))).ToArray();
         if (!groups.Any(option => option.Item1 == m_group)) m_group = "all";
-        if (m_fields.Select("labels/group-filter", "按分类筛选", ref m_group, groups)) m_page = 0;
-        if (ImGui.SmallButton(m_fields.Label("刷新整理列表"))) m_revision = -1;
+        if (m_fields.Select("labels/group-filter", "Filter by category", ref m_group, groups)) m_page = 0;
+        if (ImGui.SmallButton("Refresh annotations")) m_revision = -1;
         long revision = m_documents.GetRevision(m_document);
         if (m_revision != revision || m_cachedSearch != m_search || m_cachedGroup != m_group)
         {
@@ -91,15 +91,15 @@ public sealed class ResourceLabelPanel : EditorPanel, IEditorPanelReloadState
             m_selected.IntersectWith(catalog.entries.Select(static entry => entry.asset!.identity.persistentId));
             m_revision = revision; m_cachedSearch = m_search; m_cachedGroup = m_group;
         }
-        if (ImGui.SmallButton(m_fields.Label("选择全部筛选结果"))) foreach (var entry in m_filtered) m_selected.Add(entry.asset!.identity.persistentId);
-        ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Label("清空资源选择"))) m_selected.Clear();
-        ImGui.Text(m_fields.Format("{0} 条记录 · 已选择 {1}", m_filtered.Count, m_selected.Count));
+        if (ImGui.SmallButton("Select all filtered resources")) foreach (var entry in m_filtered) m_selected.Add(entry.asset!.identity.persistentId);
+        ImGui.SameLine(); if (ImGui.SmallButton("Clear resource selection")) m_selected.Clear();
+        ImGui.Text(string.Format(System.Globalization.CultureInfo.InvariantCulture,"{0} records · {1} selected", m_filtered.Count, m_selected.Count));
         if (m_batch.Draw(m_documents, m_document, m_selected)) { m_message = string.Empty; return; }
         int pages = Math.Max(1, (m_filtered.Count + 19) / 20); m_page = Math.Clamp(m_page, 0, pages - 1);
-        if (ImGui.SmallButton(m_fields.Label("上一页##labels"))) m_page = Math.Max(0, m_page - 1);
+        if (ImGui.SmallButton("Previous##labels")) m_page = Math.Max(0, m_page - 1);
         ImGui.SameLine(); ImGui.Text((m_page + 1) + " / " + pages); ImGui.SameLine();
-        if (ImGui.SmallButton(m_fields.Label("下一页##labels"))) m_page = Math.Min(pages - 1, m_page + 1);
-        if (m_filtered.Count == 0) EditorUiSession.current.widgets.Hint(m_fields.Localize("没有匹配的整理记录。清除筛选，或收录所选资源。"));
+        if (ImGui.SmallButton("Next##labels")) m_page = Math.Min(pages - 1, m_page + 1);
+        if (m_filtered.Count == 0) EditorUiSession.current.widgets.Hint("No matching annotations. Clear the filter or add the selected resource.");
         foreach (var entry in m_filtered.Skip(m_page * 20).Take(20)) if (DrawEntry(entry)) return;
     }
     private bool DrawEntry(ResourceLabelEntry original)
@@ -109,19 +109,19 @@ public sealed class ResourceLabelPanel : EditorPanel, IEditorPanelReloadState
         try
         {
             bool selected = m_selected.Contains(id);
-            if (ImGui.Checkbox(m_fields.Label("选择##label-resource"), ref selected)) { if (selected) m_selected.Add(id); else m_selected.Remove(id); }
+            if (ImGui.Checkbox("Select##label-resource", ref selected)) { if (selected) m_selected.Add(id); else m_selected.Remove(id); }
             ImGui.SameLine();
             if (!ImGui.CollapsingHeader((asset.isMissing ? "Missing · " : "") + asset.assetPath + "###label-resource")) return false;
             ImGui.Text(id.ToString("D"));
-            if (ImGui.SmallButton(m_fields.Label("选中资源供设计器使用"))) m_interactions.SetSelection(asset);
+            if (ImGui.SmallButton("Select resource for designers")) m_interactions.SetSelection(asset);
             var entry = original.Copy(); string group = entry.group, tags = string.Join('\n', entry.tags), description = entry.description;
-            bool changed = m_fields.Text(key + "/group", "分类", ref group); entry.group = group;
-            changed |= m_fields.MultilineText(key + "/tags", "标签（每行一个）", ref tags); entry.tags = ParagraphText.Lines(tags);
-            changed |= m_fields.MultilineText(key + "/description", "资源说明", ref description); entry.description = description;
+            bool changed = m_fields.Text(key + "/group", "Category", ref group); entry.group = group;
+            changed |= m_fields.MultilineText(key + "/tags", "Tags (one per line)", ref tags); entry.tags = ParagraphText.Lines(tags);
+            changed |= m_fields.MultilineText(key + "/description", "Resource description", ref description); entry.description = description;
             if (changed)
-            { m_documents.Edit<ResourceLabelCatalogAsset>(m_document, m_fields.Localize("编辑资源整理记录"), value => ResourceLabelEditService.Set(value, entry), m_fields.mergeKey); m_message = string.Empty; return true; }
-            if (!ImGui.SmallButton(m_fields.Label("移除整理记录（保留资源）"))) return false;
-            m_fields.Finish(); m_documents.Edit<ResourceLabelCatalogAsset>(m_document, m_fields.Localize("移除资源整理记录"), value => ResourceLabelEditService.Remove(value, id));
+            { m_documents.Edit<ResourceLabelCatalogAsset>(m_document, "Edit resource annotation", value => ResourceLabelEditService.Set(value, entry), m_fields.mergeKey); m_message = string.Empty; return true; }
+            if (!ImGui.SmallButton("Remove annotation (keep resource)")) return false;
+            m_fields.Finish(); m_documents.Edit<ResourceLabelCatalogAsset>(m_document, "Remove resource annotation", value => ResourceLabelEditService.Remove(value, id));
             m_selected.Remove(id); m_message = string.Empty; return true;
         }
         finally { ImGui.PopId(); }

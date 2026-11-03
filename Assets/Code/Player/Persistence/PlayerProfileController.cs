@@ -117,6 +117,13 @@ public sealed class PlayerProfileController : IDisposable
         PlayerPreferences left,
         PlayerPreferences right
     ) => left.language == right.language && left.textSpeed == right.textSpeed && left.autoDelay == right.autoDelay && left.fontScale == right.fontScale
-        && left.skipReadOnly == right.skipReadOnly && left.reducedMotion == right.reducedMotion && left.allowFlashing == right.allowFlashing
-        && left.stopVoiceOnAdvance == right.stopVoiceOnAdvance && left.masterVolume == right.masterVolume && left.channelVolumes.SequenceEqual(right.channelVolumes);
+        && left.skipReadOnly == right.skipReadOnly && left.reducedMotion == right.reducedMotion && left.highContrast == right.highContrast
+        && left.allowFlashing == right.allowFlashing && left.holdSkipModifiers == right.holdSkipModifiers
+        && left.stopVoiceOnAdvance == right.stopVoiceOnAdvance && left.masterVolume == right.masterVolume && left.channelVolumes.SequenceEqual(right.channelVolumes)
+        && left.characterVoices.Select(static item => (item.characterId, item.volume, item.enabled))
+            .SequenceEqual(right.characterVoices.Select(static item => (item.characterId, item.volume, item.enabled)))
+        && left.keyboardShortcuts.Select(static item => (item.action, item.key, item.modifiers))
+            .SequenceEqual(right.keyboardShortcuts.Select(static item => (item.action, item.key, item.modifiers)))
+        && left.navigationShortcuts.Select(static item => (item.action, item.key, item.modifiers))
+            .SequenceEqual(right.navigationShortcuts.Select(static item => (item.action, item.key, item.modifiers)));
 }

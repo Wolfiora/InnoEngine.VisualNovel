@@ -43,7 +43,7 @@ public sealed class ParallelEditService(
     ) {
         var node = draft.graph.document.FindNode(fork) ?? throw new InvalidOperationException("Parallel fork is missing.");
         var definition = codec.Read<ParallelNode>(node);
-        if (definition.branches.Length >= 16) throw new AuthoringValidationException($"并行组最多 16 个分支。");
+        if (definition.branches.Length >= 16) throw new AuthoringValidationException($"A parallel group supports at most 16 branches.");
         string id = Guid.NewGuid().ToString("N"); definition.branches = [.. definition.branches, id]; edits.SetSettings(draft, fork, definition);
         string fragment = draft.fragments.Single(item => item.nodes.Contains(fork.value, StringComparer.Ordinal)).id;
         AddWait(draft, fragment, fork, definition, id, new(node.position.x + 280, node.position.y + definition.branches.Length * 140)); return id;
@@ -65,7 +65,7 @@ public sealed class ParallelEditService(
         while (pending.TryPop(out string? id))
         {
             if (id == definition.joinId) continue;
-            if (id == fork.value) throw new AuthoringValidationException($"分支越界，先修复返回并行起点的连接。");
+            if (id == fork.value) throw new AuthoringValidationException($"The branch leaves its scope. Fix the connection back to the parallel fork first.");
             if (!members.Add(id)) continue;
             foreach (var edge in draft.graph.document.edges.Where(edge => edge.output.nodeId.value == id)) pending.Push(edge.input.nodeId.value);
         }
@@ -81,11 +81,11 @@ public sealed class ParallelEditService(
         string branch
     ) {
         var definition = codec.Read<ParallelNode>(draft.graph.document.FindNode(fork) ?? throw new InvalidOperationException("Parallel fork is missing."));
-        if (definition.branches.Length <= 2 || !definition.branches.Contains(branch, StringComparer.Ordinal)) throw new AuthoringValidationException($"并行组至少保留两个分支。");
+        if (definition.branches.Length <= 2 || !definition.branches.Contains(branch, StringComparer.Ordinal)) throw new AuthoringValidationException($"A parallel group must retain at least two branches.");
         var members = Members(draft, fork, branch).ToHashSet(StringComparer.Ordinal);
         if (draft.entries.Any(entry => members.Contains(entry.nodeId)) || draft.graph.document.edges.Any(edge => members.Contains(edge.input.nodeId.value)
             && !members.Contains(edge.output.nodeId.value) && !(edge.output.nodeId == fork && edge.output.portId.value == branch)))
-            throw new AuthoringValidationException($"分支包含公开入口或外部连接；请先明确重连这些引用。");
+            throw new AuthoringValidationException($"The branch contains public entries or external connections. Explicitly reconnect those references first.");
         foreach (string id in members) draft.graph.document.RemoveNode(new(id));
         foreach (var fragment in draft.fragments) fragment.nodes = fragment.nodes.Where(id => !members.Contains(id)).ToArray();
         definition.branches = definition.branches.Where(id => id != branch).ToArray(); edits.SetSettings(draft, fork, definition, true);

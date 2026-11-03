@@ -35,7 +35,7 @@ public static class GlyphCoverageSources
     ) {
         var texts = new NovelLocalizationService(project.localization, project.defaultLanguage).ForLanguage(language);
         var chapters = project.chapters.Select(static chapter => new Chapter(chapter.chapterId, chapter.assetPath,
-            StoryProgramCopy.Copy(chapter.program ?? throw new AuthoringValidationException($"先保存并编译章节，再检查文字覆盖。")))).ToArray();
+            StoryProgramCopy.Copy(chapter.program ?? throw new AuthoringValidationException($"Save and compile the chapters before checking glyph coverage.")))).ToArray();
         var characters = project.characters.Select(static character => (character.resourceId, character.displayName)).ToArray();
         var entries = (project.collections?.entries ?? []).Select(CollectionEntryCopy.Copy).ToArray();
         string title = project.title;
@@ -46,7 +46,7 @@ public static class GlyphCoverageSources
                 var screen = theme is null ? UiDefinitionCopy.Copy(binding.screen!) : new UiThemeResolver(theme).Apply(binding.screen!);
                 screen.font ??= theme?.font ?? project.font;
                 return new Page(binding.role, screen, binding.screen!.assetPath, ScreenEditService.Flatten(screen).Select(static row => row.element).ToArray(),
-                    texts.resources.Text(new(screen.textFonts, screen.textIcons)), theme?.resourceId ?? "页面自身");
+                    texts.resources.Text(new(screen.textFonts, screen.textIcons)), theme?.resourceId ?? "Page defaults");
             }).ToArray();
         }).ToArray();
         return EnumerateFrozen(contexts, chapters, characters, entries, title, texts);

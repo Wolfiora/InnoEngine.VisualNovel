@@ -178,7 +178,7 @@ public sealed class NovelSessionDataSource(NovelSession session) : UiDataSource
         if (path == "choices") return session.interactiveStory?.choices.Select(option => new UiDataRow(option.id, new Dictionary<string, NovelValue>
         {
             ["id"] = NovelValue.String(option.id), ["text"] = NovelValue.String(option.text),
-            ["enabled"] = NovelValue.Boolean(option.enabled), ["reason"] = NovelValue.String(option.disabledReason), ["hasReason"] = NovelValue.Boolean(option.disabledReason.Length > 0), ["selected"] = NovelValue.Boolean(option.selected)
+            ["enabled"] = NovelValue.Boolean(option.enabled), ["reason"] = NovelValue.String(option.enabled ? "" : option.disabledReason), ["hasReason"] = NovelValue.Boolean(!option.enabled && option.disabledReason.Length > 0), ["selected"] = NovelValue.Boolean(option.selected)
         })).ToArray() ?? [];
         if (path == "history") return session.history.Select((line, index) => new UiDataRow(index.ToString(System.Globalization.CultureInfo.InvariantCulture), new Dictionary<string, NovelValue>
         {

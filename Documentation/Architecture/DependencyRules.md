@@ -6,6 +6,8 @@ Runtime 不引用 Compiler、Authoring 或 Editor。Editor 和 Authoring 可以�
 
 引擎负责身份、GraphDocument、资产和 Artifact、Serialization、Editor 文档和 History。VN 的索引、剧本投影、布局缓存是按文档修订派生的数据，不能成为第二份可保存语义。运行时回滚日志是游戏检查点，不是编辑器撤销栈。
 
-每个组件、预览和回想拥有独立会话。GPU、音频、异步保存与事件注册由具体 owner 释放。没有静态 CurrentGame 或全局插件实例注册表；跨代传输只保留中立数据。原生 Scene → GameObject → GameBehavior 入口见 [引擎复用](EngineReuse.md)。
+每个 Scene System、预览和回想拥有独立会话。GPU、音频、异步保存与事件注册由具体 owner 释放。没有静态 CurrentGame 或全局插件实例注册表；跨代传输只保留中立数据。原生 Scene → GameSystem 会话入口及 GameObject → Component 表现所有权见 [引擎复用](EngineReuse.md)。
 
 正式检查由 `Tools/ArchitectureCheck` 检查源码归属与输出 PE 引用；它不会修改引擎规则。所有工具输出、测试工程和缓存放在插件仓库。引擎及其他功能插件是只读边界。
+
+原生场景创作需要 Authoring → Integration 依赖：Authoring 通过正式 SceneEdits 创建 VN 组件并记录 History，Editor 仅发起操作。Integration 仍仅引用 Runtime 层，不反向依赖 Authoring。这是将原生对象作为内容权威后的明确边界调整，没有新增程序集。

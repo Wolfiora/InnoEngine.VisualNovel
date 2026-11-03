@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Model.Interface.Actions;
 public sealed class UiActionCatalogAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing catalog title.</summary>
-    [SerializableProperty] public string title { get; set; } = "界面动作目录";
+    [SerializableProperty] public string title { get; set; } = "UI actions";
     /// <summary>Gets or sets explicit action metadata supplied by the extension author.</summary>
     [SerializableProperty] public UiActionDefinition[] definitions { get; set; } = [];
 }

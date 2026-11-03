@@ -44,12 +44,12 @@ public sealed class StoryImportService(
         AudioCueAsset[]? audio = null
     ) {
         var parsed = DelimitedTextTable.Parse(text, separator);
-        if (parsed.Count == 0) throw new AuthoringValidationException($"剧本表格需要一行表头。");
+        if (parsed.Count == 0) throw new AuthoringValidationException($"The script table requires a header row.");
         var positions = columns.ToDictionary(name => name, name => mapping is not null && mapping.TryGetValue(name, out int position) ? position
             : Array.FindIndex(parsed[0], header => header.Equals(name, StringComparison.OrdinalIgnoreCase)), StringComparer.Ordinal);
         if (positions["text"] < 0 || positions.Any(item => item.Value < -1 || item.Value >= parsed[0].Length)
             || positions.Values.Where(static value => value >= 0).Distinct().Count() != positions.Values.Count(static value => value >= 0))
-            throw new AuthoringValidationException($"请将 text 映射到台词列；其他列可不分配，已分配列不能重复。");
+            throw new AuthoringValidationException($"Map text to the dialogue column. Other columns are optional, and assigned columns must be distinct.");
         var input = new List<StoryImportRow>();
         for (int index = 1; index < parsed.Count; index++)
         {
@@ -57,7 +57,7 @@ public sealed class StoryImportService(
             string Cell(string column) => positions[column] >= 0 && positions[column] < cells.Length ? cells[positions[column]] : "";
             string layout = Cell("layout").Trim(); bool valid = layout.Length == 0 || Enum.TryParse<DialoguePresentation>(layout, true, out var _) && Enum.IsDefined(Enum.Parse<DialoguePresentation>(layout, true));
             input.Add(new(index + 1, Cell("speaker").Trim(), Cell("characterId").Trim(), Normalize(Cell("text")), Cell("voice").Trim(), Cell("textId").Trim(), Normalize(Cell("note")),
-                valid && layout.Length > 0 ? Enum.Parse<DialoguePresentation>(layout, true) : DialoguePresentation.Adv, valid ? "" : "layout 必须是 Adv、Nvl、Bubble、Overlay 或 Letter。"));
+                valid && layout.Length > 0 ? Enum.Parse<DialoguePresentation>(layout, true) : DialoguePresentation.Adv, valid ? "" : "Layout must be Adv, Nvl, Bubble, Overlay or Letter."));
         }
         return Review(draft, input, characters ?? [], audio ?? []);
     }
@@ -73,7 +73,7 @@ public sealed class StoryImportService(
         CharacterAsset[]? characters = null,
         AudioCueAsset[]? audio = null
     ) {
-        if (text.Length > 16 * 1024 * 1024) throw new AuthoringValidationException($"剧本交换超过 16 MiB 预览预算。");
+        if (text.Length > 16 * 1024 * 1024) throw new AuthoringValidationException($"The script exchange exceeds the 16 MiB preview budget.");
         var rows = new List<StoryImportRow>(); var paragraph = new StringBuilder();
         using var reader = new StringReader(Normalize(text).TrimStart('\uFEFF'));
         while (reader.ReadLine() is { } line)
@@ -86,7 +86,7 @@ public sealed class StoryImportService(
         void AddParagraph()
         {
             string content = paragraph.ToString().Trim(); paragraph.Clear(); if (content.Length == 0) return;
-            if (rows.Count >= 10000) throw new AuthoringValidationException($"每批最多导入一万句对白。");
+            if (rows.Count >= 10000) throw new AuthoringValidationException($"Import at most 10,000 dialogue lines per batch.");
             int colon = content.IndexOfAny([':', '：']); string speaker = "";
             if (colon == 0) content = content[1..].TrimStart();
             else if (colon is > 0 and <= 64 && !content[..colon].Contains('\n')) { speaker = content[..colon].Trim(); content = content[(colon + 1)..].TrimStart(); }
@@ -111,12 +111,12 @@ public sealed class StoryImportService(
     ) {
         byte[] before = serialization.Serialize(draft);
         if (Digest(before) != preview.baseline || ResourceDigest(characters ?? [], audio ?? []) != preview.resources)
-            throw new AuthoringValidationException($"章节或角色/语音库已改变，请重新预览导入。");
-        if (preview.rows.Count == 0 || preview.rows.Count > 10000 || preview.rows.Any(static row => row.message.Length > 0)) throw new AuthoringValidationException($"请先修复全部导入记录；不接受空导入或超过一万句的单批次。");
+            throw new AuthoringValidationException($"The chapter or character/voice library changed. Preview the import again.");
+        if (preview.rows.Count == 0 || preview.rows.Count > 10000 || preview.rows.Any(static row => row.message.Length > 0)) throw new AuthoringValidationException($"Fix every import record first. A batch must contain 1–10,000 dialogue lines.");
         preview = Review(draft, preview.rows, characters ?? [], audio ?? []);
-        if (preview.rows.Any(static row => row.message.Length > 0)) throw new AuthoringValidationException($"导入记录的复核数据无效，请重新读取并预览。");
+        if (preview.rows.Any(static row => row.message.Length > 0)) throw new AuthoringValidationException($"The import review data is invalid. Read the source and preview it again.");
         if (string.IsNullOrWhiteSpace(name) || name.Length > 256 || string.IsNullOrWhiteSpace(entryId) || entryId.Length > 128 || entryId.Any(char.IsControl)
-            || draft.entries.Any(entry => entry.id == entryId)) throw new AuthoringValidationException($"需要片段名称和未被占用的公开入口 ID。");
+            || draft.entries.Any(entry => entry.id == entryId)) throw new AuthoringValidationException($"Provide a fragment name and an unused public entry ID.");
         var candidate = serialization.Deserialize<StoryDraftState>(before); var edits = new StoryEditService(codec); var notes = new StoryNotesEditService(serialization);
         string fragment = Guid.NewGuid().ToString("N"); candidate.fragments = [.. candidate.fragments, new() { id = fragment, name = name }];
         GraphNodeId start = edits.Add(candidate, fragment, StoryNodeIds.entry, new(0, 0)), previous = start;
@@ -132,8 +132,8 @@ public sealed class StoryImportService(
         GraphNodeId end = edits.Add(candidate, fragment, StoryNodeIds.end, new(1920, index / 5 * 190)); edits.Connect(candidate, new(previous, new("next")), end);
         candidate.entries = [.. candidate.entries, new() { id = entryId, nodeId = start.value }];
         var compilation = new StoryCompiler(serialization).Compile(candidate.ToAsset());
-        if (!compilation.success) throw new AuthoringValidationException($"导入候选无法编译：{string.Join("；", compilation.diagnostics.Take(20).Select(issue =>
-            (sourceRecords.TryGetValue(issue.nodeId?.value ?? string.Empty, out int record) ? "记录 " + record.ToString(CultureInfo.InvariantCulture) + "：" : "") + issue.message))}");
+        if (!compilation.success) throw new AuthoringValidationException($"The import candidate failed compilation: {string.Join("; ", compilation.diagnostics.Take(20).Select(issue =>
+            (sourceRecords.TryGetValue(issue.nodeId?.value ?? string.Empty, out int record) ? "Record " + record.ToString(CultureInfo.InvariantCulture) + ": " : "") + issue.message))}");
         draft.graph = candidate.graph; draft.fragments = candidate.fragments; draft.entries = candidate.entries; draft.variables = candidate.variables; return start.value;
     }
     private StoryImportPreview Review(
@@ -142,30 +142,30 @@ public sealed class StoryImportService(
         CharacterAsset[] characters,
         AudioCueAsset[] audio
     ) {
-        if (input.Count is < 1 or > 10000) throw new AuthoringValidationException($"每批导入需要 1–10000 句对白。");
+        if (input.Count is < 1 or > 10000) throw new AuthoringValidationException($"Each import batch requires 1–10,000 dialogue lines.");
         var ids = draft.graph.document.nodes.Where(static node => node.definitionId == StoryNodeIds.dialogue).Select(node => codec.Read<DialogueNode>(node).textId).ToHashSet(StringComparer.Ordinal);
         var rows = new List<StoryImportRow>();
         foreach (var raw in input)
         {
             string message = raw.message, speaker = raw.speaker, character = raw.character, voice = raw.voice;
             string id = raw.textId.Length > 0 ? raw.textId : Guid.NewGuid().ToString("N");
-            if (raw.record < 1 || !Enum.IsDefined(raw.presentation) || raw.text.Length == 0 || raw.text.Length > 1000000 || raw.note.Length > 32768 || speaker.Length > 256 || id.Length > 4096) message = "台词为空或记录/布局/文本/姓名/备注/ID 无效。";
+            if (raw.record < 1 || !Enum.IsDefined(raw.presentation) || raw.text.Length == 0 || raw.text.Length > 1000000 || raw.note.Length > 32768 || speaker.Length > 256 || id.Length > 4096) message = "The dialogue is empty, or its record, layout, text, name, note or ID is invalid.";
             var matches = characters.Where(item => character.Length > 0 ? item.resourceId == character : speaker.Length > 0
                 && (item.displayName.Equals(speaker, StringComparison.OrdinalIgnoreCase) || item.aliases.Contains(speaker, StringComparer.OrdinalIgnoreCase))).ToArray();
-            if (matches.Length > 1 || character.Length > 0 && matches.Length != 1) message = "角色匹配缺失或不唯一，请使用明确的 characterId。";
+            if (matches.Length > 1 || character.Length > 0 && matches.Length != 1) message = "The character match is missing or ambiguous. Supply an explicit characterId.";
             else if (matches.Length == 1)
             {
-                if (matches[0].isMissing) message = "所匹配的角色资源缺失。";
+                if (matches[0].isMissing) message = "The matched character asset is missing.";
                 character = matches[0].resourceId;
                 if (speaker.Equals(matches[0].displayName, StringComparison.OrdinalIgnoreCase) || matches[0].aliases.Contains(speaker, StringComparer.OrdinalIgnoreCase)) speaker = "";
             }
             if (voice.Length > 0)
             {
                 var cues = audio.Where(item => item.resourceId == voice || item.title == voice).ToArray();
-                if (cues.Length != 1 || cues[0].channel != NovelAudioChannel.Voice || cues[0].loop || cues[0].isMissing || cues[0].clip is not { isMissing: false }) message = "语音必须匹配唯一、非循环且已分配录音的 Voice 提示资源。";
+                if (cues.Length != 1 || cues[0].channel != NovelAudioChannel.Voice || cues[0].loop || cues[0].isMissing || cues[0].clip is not { isMissing: false }) message = "Voice must match one non-looping Voice cue with an assigned recording.";
                 else voice = cues[0].resourceId;
             }
-            if (!ids.Add(id)) message = "文本 ID 与本章或导入中的另一条记录重复。";
+            if (!ids.Add(id)) message = "The text ID duplicates another record in this chapter or import.";
             rows.Add(raw with { speaker = speaker, character = character, voice = voice, textId = id, message = message });
         }
         return new(Digest(serialization.Serialize(draft)), ResourceDigest(characters, audio), Array.AsReadOnly(rows.ToArray()));

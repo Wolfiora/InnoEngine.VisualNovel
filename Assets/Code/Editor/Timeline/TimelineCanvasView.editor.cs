@@ -62,16 +62,16 @@ internal sealed class TimelineCanvasView(
         if (track >= 0 && track < clip.tracks.Length && clip.tracks[track].keys.Any(key => key.time == authoredTime)
             && !m_selected.Contains(new(track, keyTime))) { m_selected.Clear(); m_selected.Add(new(track, keyTime)); }
         double zoom = m_zoom;
-        if (fields.Number("timeline/zoom", fields.Localize("时间缩放（倍）"), ref zoom, 1, 64)) { Finish(); m_zoom = zoom; }
+        if (fields.Number("timeline/zoom", "Time zoom", ref zoom, 1, 64)) { Finish(); m_zoom = zoom; }
         double span = clip.duration / m_zoom;
         m_viewStart = Math.Clamp(m_viewStart, 0, clip.duration - span);
-        if (fields.Number("timeline/start", fields.Localize("可见时间起点"), ref m_viewStart, 0, clip.duration - span)) Finish();
-        if (ImGui.SmallButton(fields.Label("完整片段"))) { Finish(); m_zoom = 1; m_viewStart = 0; span = clip.duration; }
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Label("定位播放头"))) { Finish(); m_viewStart = Math.Clamp(time - span / 2, 0, clip.duration - span); }
+        if (fields.Number("timeline/start", "Visible time start", ref m_viewStart, 0, clip.duration - span)) Finish();
+        if (ImGui.SmallButton("Entire clip")) { Finish(); m_zoom = 1; m_viewStart = 0; span = clip.duration; }
+        ImGui.SameLine(); if (ImGui.SmallButton("Locate playhead")) { Finish(); m_viewStart = Math.Clamp(time - span / 2, 0, clip.duration - span); }
         if (clip.tracks.Length > m_pageSize)
         {
-            if (ImGui.SmallButton(fields.Label("上一组轨道"))) { Finish(); m_firstTrack = Math.Max(0, m_firstTrack - m_pageSize); }
-            ImGui.SameLine(); if (ImGui.SmallButton(fields.Label("下一组轨道"))) { Finish(); m_firstTrack = Math.Min(Math.Max(0, clip.tracks.Length - m_pageSize), m_firstTrack + m_pageSize); }
+            if (ImGui.SmallButton("Previous tracks")) { Finish(); m_firstTrack = Math.Max(0, m_firstTrack - m_pageSize); }
+            ImGui.SameLine(); if (ImGui.SmallButton("Next tracks")) { Finish(); m_firstTrack = Math.Min(Math.Max(0, clip.tracks.Length - m_pageSize), m_firstTrack + m_pageSize); }
         }
         m_firstTrack = Math.Clamp(m_firstTrack, 0, Math.Max(0, clip.tracks.Length - 1));
         int count = Math.Min(m_pageSize, clip.tracks.Length - m_firstTrack);
@@ -91,7 +91,7 @@ internal sealed class TimelineCanvasView(
             var hitMarker = clip.markers.OrderBy(item => Math.Abs(X(item.time) - mouse.X)).FirstOrDefault();
             int row = m_firstTrack + (int)Math.Floor((mouse.Y - origin.Y - 32) / 28);
             if (mouse.Y < origin.Y + 32 && hitMarker is not null && Math.Abs(X(hitMarker.time) - mouse.X) <= 8)
-            { marker = m_marker = hitMarker.id; time = hitMarker.time; m_drag = new(interactions.history, "移动演出标记"); }
+            { marker = m_marker = hitMarker.id; time = hitMarker.time; m_drag = new(interactions.history, "Move performance marker"); }
             else if (mouse.Y < origin.Y + 32) { m_scrub = true; time = Math.Clamp(PointerTime(), 0, clip.duration); }
             else
             {
@@ -104,7 +104,7 @@ internal sealed class TimelineCanvasView(
                     {
                         if (!Shift() && !m_selected.Contains(address)) m_selected.Clear();
                         m_selected.Add(address); m_start = PerformanceKeySelection.Capture(clip, m_selected);
-                        m_primaryTime = hit.time; m_dragOffset = 0; m_drag = new(interactions.history, "移动所选演出关键帧");
+                        m_primaryTime = hit.time; m_dragOffset = 0; m_drag = new(interactions.history, "Move selected performance keyframes");
                     }
                     track = row; time = hit.time;
                     keyTime = m_selected.Contains(address) ? hit.time : m_selected.Where(key => key.track == row).Select(static key => key.time).DefaultIfEmpty(-1).First();
@@ -133,7 +133,7 @@ internal sealed class TimelineCanvasView(
                 {
                     double next = Bounded(PointerTime()); var selected = clip.markers.Single(item => item.id == m_marker);
                     if (selected.time != next)
-                    { documents.Edit<PerformanceClipAsset>(document, fields.Localize("移动演出标记"), candidate => PerformanceEditService.SetMarker(candidate, new() { id = selected.id, name = selected.name, time = next }), m_drag.mergeKey); edited = true; time = next; }
+                    { documents.Edit<PerformanceClipAsset>(document, "Move performance marker", candidate => PerformanceEditService.SetMarker(candidate, new() { id = selected.id, name = selected.name, time = next }), m_drag.mergeKey); edited = true; time = next; }
                 }
                 else if (m_start is not null)
                 {
@@ -143,14 +143,14 @@ internal sealed class TimelineCanvasView(
                     if (offset != m_dragOffset)
                     {
                         var tracks = m_start.Transform(offset);
-                        documents.Edit<PerformanceClipAsset>(document, fields.Localize("移动所选演出关键帧"), candidate => candidate.tracks = tracks, m_drag.mergeKey);
+                        documents.Edit<PerformanceClipAsset>(document, "Move selected performance keyframes", candidate => candidate.tracks = tracks, m_drag.mergeKey);
                         m_selected.Clear(); m_selected.UnionWith(m_start.keys.Select(key => new PerformanceKeyAddress(key.track, key.time + offset)));
                         m_dragOffset = offset; keyTime = time = m_primaryTime + offset; edited = true; m_message = string.Empty;
                     }
                 }
                 if (edited) m_revision = documents.GetRevision(document);
             }
-            catch (InvalidOperationException failure) { m_message = fields.Error(failure); }
+            catch (InvalidOperationException failure) { m_message = (failure).Message; }
         }
         if (!ImGui.IsMouseButtonDown(ImGuiMouseButton.Left)) Finish();
         var draw = ImGui.GetDrawList(); uint line = ImGui.ToPackedColor(new(.3f, .35f, .4f, 1)), accent = ImGui.ToPackedColor(new(1, .8f, .4f, 1));
@@ -176,18 +176,18 @@ internal sealed class TimelineCanvasView(
         finally { draw.PopClip(); }
         ImGui.Dummy(size);
         if (edited) return true;
-        if (ImGui.SmallButton(fields.Label("选择全部关键帧"))) { Finish(); m_selected.Clear(); for (int index = 0; index < clip.tracks.Length; index++) foreach (var key in clip.tracks[index].keys) m_selected.Add(new(index, key.time)); }
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Label("清空关键帧选择"))) { Finish(); m_selected.Clear(); keyTime = -1; }
-        ImGui.Text(fields.Localize("已选 ") + m_selected.Count + fields.Localize(" 个关键帧。空白拖框，Ctrl 切换，Shift 追加；拖动保留间距，Alt 暂停吸附，Esc 取消。"));
+        if (ImGui.SmallButton("Select all keyframes")) { Finish(); m_selected.Clear(); for (int index = 0; index < clip.tracks.Length; index++) foreach (var key in clip.tracks[index].keys) m_selected.Add(new(index, key.time)); }
+        ImGui.SameLine(); if (ImGui.SmallButton("Clear keyframe selection")) { Finish(); m_selected.Clear(); keyTime = -1; }
+        ImGui.Text("Selected " + m_selected.Count + " keyframes. Drag empty space to select, Ctrl toggles and Shift adds; dragging preserves spacing, Alt suspends snapping, and Esc cancels.");
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
         if (m_selected.Count == 0) return false;
-        fields.Number("timeline/offset", fields.Localize("整组偏移（秒）"), ref m_offset, -clip.duration, clip.duration);
-        ImGui.Checkbox(fields.Label("明确允许覆盖目标时间的关键帧"), ref m_replace); ImGui.Checkbox(fields.Label("删除时同时移除空轨道"), ref m_removeEmpty);
-        bool move = ImGui.Button(fields.Label("偏移所选关键帧")); ImGui.SameLine(); bool copy = ImGui.Button(fields.Label("复制所选关键帧")); ImGui.SameLine(); bool delete = ImGui.Button(fields.Label("删除所选关键帧"));
+        fields.Number("timeline/offset", "Group offset (seconds)", ref m_offset, -clip.duration, clip.duration);
+        ImGui.Checkbox("Allow overwriting keyframes at target times", ref m_replace); ImGui.Checkbox("Remove empty tracks when deleting", ref m_removeEmpty);
+        bool move = ImGui.Button("Offset selected keyframes"); ImGui.SameLine(); bool copy = ImGui.Button("Copy selected keyframes"); ImGui.SameLine(); bool delete = ImGui.Button("Delete selected keyframes");
         if (!move && !copy && !delete) return false;
         Finish(); fields.Finish(); var frozen = PerformanceKeySelection.Capture(clip, m_selected);
         var result = delete ? frozen.Delete(m_removeEmpty) : frozen.Transform(m_offset, copy, m_replace);
-        documents.Edit<PerformanceClipAsset>(document, delete ? fields.Localize("删除所选演出关键帧") : copy ? fields.Localize("复制所选演出关键帧") : fields.Localize("偏移所选演出关键帧"), candidate => candidate.tracks = result);
+        documents.Edit<PerformanceClipAsset>(document, delete ? "Delete selected performance keyframes" : copy ? "Copy selected performance keyframes" : "Offset selected performance keyframes", candidate => candidate.tracks = result);
         m_revision = documents.GetRevision(document); m_selected.Clear(); keyTime = -1; return true;
 
         double Bounded(double value) => snap && !Alt() ? PerformanceEditService.Snap(value, step, clip.duration) : Math.Clamp(value, 0, clip.duration);

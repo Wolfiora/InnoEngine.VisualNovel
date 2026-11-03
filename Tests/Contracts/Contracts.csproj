@@ -8,6 +8,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <AssemblyMetadata Include="Inno.AssemblyDomain" Value="InnoInternal" />
+    <AssemblyMetadata Include="Inno.AssemblyScope" Value="Editor" />
     <Compile Include="../../Assets/~Samples/ScriptExtension/DelayScoreCommand.cs.txt" Link="Samples/DelayScoreCommand.cs" />
     <Compile Include="../../Assets/~Samples/ScriptExtension/SetPageCountAction.cs.txt" Link="Samples/SetPageCountAction.cs" />
     <Compile Include="../../Assets/~Samples/ScriptExtension/PageCounterDataSource.cs.txt" Link="Samples/PageCounterDataSource.cs" />

@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Model.Extensions;
 public sealed class NovelCommandCatalogAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing catalog title.</summary>
-    [SerializableProperty] public string title { get; set; } = "自定义指令目录";
+    [SerializableProperty] public string title { get; set; } = "Custom commands";
     /// <summary>Gets or sets implemented command contracts published by their extension author.</summary>
     [SerializableProperty] public NovelCommandDefinition[] definitions { get; set; } = [];
 }

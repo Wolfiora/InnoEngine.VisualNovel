@@ -17,8 +17,8 @@ public static class CollectionEditService
         string id,
         CollectionKind kind
     ) {
-        if (string.IsNullOrWhiteSpace(id) || asset.entries.Any(item => item.id == id)) throw new AuthoringValidationException($"收藏条目标识为空或已存在。");
-        asset.entries = [.. asset.entries, new() { id = id, kind = kind, title = "新收藏条目" }];
+        if (string.IsNullOrWhiteSpace(id) || asset.entries.Any(item => item.id == id)) throw new AuthoringValidationException($"The collection entry ID is empty or already exists.");
+        asset.entries = [.. asset.entries, new() { id = id, kind = kind, title = "New collection entry" }];
     }
     /// <summary>Replaces only the selected declaration while preserving its stable content identity.</summary>
     /// <param name="asset">The detached document.</param>
@@ -28,7 +28,7 @@ public static class CollectionEditService
         CollectionEntry entry
     ) {
         int index = Array.FindIndex(asset.entries, item => item.id == entry.id);
-        if (index < 0) throw new AuthoringValidationException($"收藏条目已被移除。");
+        if (index < 0) throw new AuthoringValidationException($"The collection entry has been removed.");
         asset.entries[index] = CollectionEntryCopy.Copy(entry);
     }
     /// <summary>Removes an explicitly confirmed entry; unresolved story references remain visible to project validation.</summary>
@@ -38,7 +38,7 @@ public static class CollectionEditService
         CollectionAsset asset,
         string id
     ) {
-        if (!asset.entries.Any(item => item.id == id)) throw new AuthoringValidationException($"收藏条目已被移除。");
+        if (!asset.entries.Any(item => item.id == id)) throw new AuthoringValidationException($"The collection entry has been removed.");
         asset.entries = asset.entries.Where(item => item.id != id).ToArray();
     }
 }

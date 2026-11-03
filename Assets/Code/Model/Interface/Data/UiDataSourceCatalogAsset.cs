@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Model.Interface.Data;
 public sealed class UiDataSourceCatalogAsset : AssetObject
 {
     /// <summary>Gets or sets the catalog title.</summary>
-    [SerializableProperty] public string title { get; set; } = "UI 数据源目录";
+    [SerializableProperty] public string title { get; set; } = "UI data sources";
     /// <summary>Gets or sets complete typed source schemas.</summary>
     [SerializableProperty] public UiDataSourceDefinition[] definitions { get; set; } = [];
 }

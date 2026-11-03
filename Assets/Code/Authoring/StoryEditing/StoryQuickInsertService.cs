@@ -44,7 +44,7 @@ public sealed class StoryQuickInsertService(
         if (definitionId is StoryNodeIds.entry or StoryNodeIds.join) throw new ArgumentException("Entries and owned joins are created through chapter or parallel tools.", nameof(definitionId));
         _ = draft.fragments.Single(fragment => fragment.id == fragmentId);
         var edge = edgeId is { } selected ? draft.graph.document.edges.Single(item => item.id == selected) : null;
-        if (edge is not null && edge.output.portId.value != "next") throw new AuthoringValidationException($"快捷插入使用明确的 next 连线；分支输出请在连接编辑中处理。");
+        if (edge is not null && edge.output.portId.value != "next") throw new AuthoringValidationException($"Quick insertion requires an explicit next edge. Edit branch outputs in the connection editor.");
         if (definitionId == StoryNodeIds.dialogue && edge is not null
             && draft.graph.document.FindNode(edge.output.nodeId)?.definitionId == StoryNodeIds.dialogue
             && draft.fragments.Single(fragment => fragment.nodes.Contains(edge.output.nodeId.value, StringComparer.Ordinal)).id == fragmentId)

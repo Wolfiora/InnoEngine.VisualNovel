@@ -10,7 +10,7 @@ public sealed class CharacterExpression : ISerializable
     /// <summary>Gets or sets the stable expression identity.</summary>
     [SerializableProperty] public string id { get; set; } = "neutral";
     /// <summary>Gets or sets the display name.</summary>
-    [SerializableProperty] public string name { get; set; } = "平静";
+    [SerializableProperty] public string name { get; set; } = "Neutral";
     /// <summary>Gets or sets explicit part overrides.</summary>
     [SerializableProperty] public CharacterPartOverride[] parts { get; set; } = [];
 

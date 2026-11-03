@@ -32,7 +32,10 @@ public sealed class NovelRenderPass : IDisposable
             throw new InvalidOperationException("VN surface shader is not ready. Inspect its target compilation diagnostics.");
         var captures = context.request.data.TryGet(Capture.NovelScreenshotService.channel, out Capture.NovelCaptureRequest[]? requests) ? requests ?? [] : [];
         var quads = (frame.image?.Paints() ?? frame.quads).Concat(captures.SelectMany(static request => request.frame.image?.Paints() ?? request.frame.quads));
-        m_resources.BeginFrame(context.resourceService, quads.Where(static quad => quad.texture.image is null).Select(static quad => quad.texture.key));
+        var meshes = frame.uiMeshes.Concat(frame.image?.Meshes() ?? [])
+            .Concat(captures.SelectMany(static request => request.frame.uiMeshes.Concat(request.frame.image?.Meshes() ?? [])));
+        m_resources.BeginFrame(context.resourceService, quads.Where(static quad => quad.texture.image is null).Select(static quad => quad.texture.key)
+            .Concat(meshes.Select(static mesh => mesh.texture.key)));
         var painter = new NovelRasterPainter(context, frame.width, frame.height, material, m_resources);
         RenderViewport viewport = context.request.viewport;
         var fit = UiCanvasFit.Create(frame.width, frame.height, new(viewport.x, viewport.y, viewport.width, viewport.height), true).bounds;
@@ -40,6 +43,7 @@ public sealed class NovelRenderPass : IDisposable
         RasterPassBuilder pass = frame.image is null
             ? painter.Add(frame.quads, context.outputTexture, fitted, !context.preservePresentationTarget, new(0, 0, 0, 1))
             : new NovelImageRenderGraph(context, frame, painter).Present(fitted);
+        if (frame.uiMeshes.Count > 0) pass = painter.AddMeshes(frame.uiMeshes, context.outputTexture, fitted);
         if (context.outputTexture.isValid) context.graph.MarkOutput(context.outputTexture);
         else pass.HasSideEffect();
         foreach (var request in captures) m_capture.Build(context, request, m_resources);

@@ -25,7 +25,7 @@ using Inno.VisualNovel.Editor.ScreenDesigner;
 namespace Inno.VisualNovel.Editor.Timeline;
 
 /// <summary>Edits reusable performance tracks and keys using pure, seekable stage preview.</summary>
-[EditorPanel("inno.vn.timeline", "VN 演出时间线 · Performance Timeline", order: 455, menuPath: "Authoring")]
+[EditorPanel("inno.vn.timeline", "VN Performance Timeline", order: 455, defaultOpen: false, menuPath: "Authoring")]
 public sealed class TimelinePanel : EditorPanel, IEditorPanelReloadState
 {
     private readonly ResourceDocumentsModule m_documents;
@@ -73,7 +73,7 @@ public sealed class TimelinePanel : EditorPanel, IEditorPanelReloadState
     {
         m_fields.BeginFrame(); m_canvasDrawn = false;
         try { Draw(); }
-        catch (Exception error) when (error is not OutOfMemoryException) { m_message = m_fields.Error(error); }
+        catch (Exception error) when (error is not OutOfMemoryException) { m_message = (error).Message; }
         finally { if (!m_canvasDrawn) m_canvas.Suspend(); m_fields.EndFrame(); }
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
     }
@@ -85,28 +85,28 @@ public sealed class TimelinePanel : EditorPanel, IEditorPanelReloadState
     protected override void OnDetach(EditorContext context) { Finish(); m_preview.Dispose(); m_stage = null; }
     private void Draw()
     {
-        if (!m_toolbar.Draw("演出片段", ".ivnclip", static () => new PerformanceClipAsset { resourceId = "performance-" + Guid.NewGuid().ToString("N") }, out PerformanceClipAsset? clip) || clip is null) return;
+        if (!m_toolbar.Draw("Performance clip", ".ivnclip", static () => new PerformanceClipAsset { resourceId = "performance-" + Guid.NewGuid().ToString("N") }, out PerformanceClipAsset? clip) || clip is null) return;
         string name = clip.displayName, resource = clip.resourceId;
-        bool changed = m_fields.Text("clip/name", m_fields.Localize("片段名称"), ref name); clip.displayName = name;
-        changed |= m_fields.Text("clip/resource", m_fields.Localize("剧情资源 ID"), ref resource); clip.resourceId = resource;
+        bool changed = m_fields.Text("clip/name", "Clip name", ref name); clip.displayName = name;
+        changed |= m_fields.Text("clip/resource", "Story resource ID", ref resource); clip.resourceId = resource;
         double duration = clip.duration;
-        changed |= m_fields.Number("clip/duration", m_fields.Localize("片段秒数"), ref duration, 0.001, 36000);
-        if (duration < clip.tracks.SelectMany(static item => item.keys).Select(static key => key.time).Concat(clip.markers.Select(static marker => marker.time)).DefaultIfEmpty(0).Max()) throw new InvalidOperationException(m_fields.Localize("先移动或删除超出新时长的关键帧和标记。"));
+        changed |= m_fields.Number("clip/duration", "Clip duration (seconds)", ref duration, 0.001, 36000);
+        if (duration < clip.tracks.SelectMany(static item => item.keys).Select(static key => key.time).Concat(clip.markers.Select(static marker => marker.time)).DefaultIfEmpty(0).Max()) throw new InvalidOperationException("Move or delete keyframes and markers beyond the new duration first.");
         clip.duration = duration;
         bool loop = clip.loop;
-        changed |= m_fields.Toggle("clip/loop", "循环", ref loop); clip.loop = loop;
+        changed |= m_fields.Toggle("clip/loop", "Loop", ref loop); clip.loop = loop;
         bool essential = clip.essential;
-        changed |= m_fields.Toggle("clip/essential", "减少动态时保留的重要演出", ref essential); clip.essential = essential;
-        if (changed) m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("编辑演出片段"), candidate =>
+        changed |= m_fields.Toggle("clip/essential", "Essential performance retained with reduced motion", ref essential); clip.essential = essential;
+        if (changed) m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Edit performance clip", candidate =>
         { candidate.displayName = clip.displayName; candidate.resourceId = clip.resourceId; candidate.duration = clip.duration; candidate.loop = clip.loop; candidate.essential = clip.essential; }, m_fields.mergeKey);
-        m_fields.Text("clip/new-target", m_fields.Localize("新轨道目标槽"), ref m_slot);
-        m_fields.SelectEnum("clip/new-property", "新轨道属性", ref m_property);
-        if (ImGui.Button(m_fields.Label("添加属性轨道")))
-        { Finish(); m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("添加演出轨道"), candidate => PerformanceEditService.AddTrack(candidate, m_slot, m_property)); }
+        m_fields.Text("clip/new-target", "New track target slot", ref m_slot);
+        m_fields.SelectEnum("clip/new-property", "New track property", ref m_property);
+        if (ImGui.Button("Add property track"))
+        { Finish(); m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Add performance track", candidate => PerformanceEditService.AddTrack(candidate, m_slot, m_property)); }
         double time = Math.Min(m_time, clip.duration);
-        m_fields.Number("clip/preview-time", m_fields.Localize("预览逻辑秒数"), ref time, 0, clip.duration); m_time = time;
-        m_fields.Toggle("clip/snap", "拖动与写入时吸附", ref m_snap);
-        m_fields.Number("clip/grid", m_fields.Localize("吸附间隔（秒）"), ref m_gridStep, .000001, 36000);
+        m_fields.Number("clip/preview-time", "Preview time (logical seconds)", ref time, 0, clip.duration); m_time = time;
+        m_fields.Toggle("clip/snap", "Snap when dragging and writing", ref m_snap);
+        m_fields.Number("clip/grid", "Snap interval (seconds)", ref m_gridStep, .000001, 36000);
         m_canvasDrawn = true;
         if (m_canvas.Draw(m_toolbar.documentId, clip, ref m_track, ref m_keyTime, ref m_time, ref m_marker, m_snap, m_gridStep)) return;
         Markers(clip);
@@ -119,25 +119,25 @@ public sealed class TimelinePanel : EditorPanel, IEditorPanelReloadState
         if (m_track >= 0 && m_track < clip.tracks.Length) Keys(clip);
         Range(clip);
         foreach (var sample in new PerformancePlayer(clip).Evaluate(m_time).Where(static sample => sample.property == PerformanceProperty.Volume))
-            ImGui.Text(m_fields.Localize("音量预览 · ") + sample.target + " × " + sample.value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
+            ImGui.Text("Volume preview · " + sample.target + " × " + sample.value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
         if (clip.tracks.Any(static track => track.property == PerformanceProperty.Volume))
-            EditorUiSession.current.widgets.Hint(m_fields.Localize("这里纯求值音量数值；实际声音与混合演出在剧情预览中使用同一片段，不在拖动时启动或重播音频。"));
-        if (NovelResourceSelection.Get<StageAsset>(m_interactions) is { } selected && ImGui.Button(m_fields.Label("使用所选舞台作为明确预览状态"))) m_stage = StageAssetCopy.Copy(selected);
-        if (NovelResourceSelection.Get<ScreenAsset>(m_interactions) is { } page && ImGui.Button(m_fields.Label("使用所选页面作为 UI 预览"))) m_uiPage = UiDefinitionCopy.Copy(page);
-        if (NovelResourceSelection.Get<VisualEffectAsset>(m_interactions) is { kind: VisualEffectKind.Screen } effect && ImGui.Button(m_fields.Label("使用所选屏幕效果预览参数"))) m_effect = VisualEffectCopy.Copy(effect);
+            EditorUiSession.current.widgets.Hint("This only evaluates volume values. Actual sound and mixed performance use the same clip in story preview; scrubbing does not start or replay audio.");
+        if (NovelResourceSelection.Get<StageAsset>(m_interactions) is { } selected && ImGui.Button("Use selected stage as explicit preview state")) m_stage = StageAssetCopy.Copy(selected);
+        if (NovelResourceSelection.Get<ScreenAsset>(m_interactions) is { } page && ImGui.Button("Use selected screen for UI preview")) m_uiPage = UiDefinitionCopy.Copy(page);
+        if (NovelResourceSelection.Get<VisualEffectAsset>(m_interactions) is { kind: VisualEffectKind.Screen } effect && ImGui.Button("Use selected screen effect for parameter preview")) m_effect = VisualEffectCopy.Copy(effect);
         if (m_effect is not null)
         {
-            m_fields.Text("preview/effect-instance", m_fields.Localize("效果实例"), ref m_effectInstance);
-            if (string.IsNullOrWhiteSpace(m_effectInstance)) { EditorUiSession.current.widgets.Hint(m_fields.Localize("指定一个非空效果实例。")); return; }
-            if (ImGui.SmallButton(m_fields.Label("关闭效果预览"))) m_effect = null;
+            m_fields.Text("preview/effect-instance", "Effect instance", ref m_effectInstance);
+            if (string.IsNullOrWhiteSpace(m_effectInstance)) { EditorUiSession.current.widgets.Hint("Specify a nonempty effect instance."); return; }
+            if (ImGui.SmallButton("Close effect preview")) m_effect = null;
         }
         if (m_uiPage is not null)
         {
-            m_fields.Text("preview/ui-role", m_fields.Localize("页面角色"), ref m_uiRole);
-            if (!Model.Story.Nodes.Interface.SystemNodeRules.IsPageRole(m_uiRole)) { EditorUiSession.current.widgets.Hint(m_fields.Localize("页面角色必须是有效的游戏壳角色。")); return; }
-            if (ImGui.SmallButton(m_fields.Label("关闭页面预览"))) m_uiPage = null;
+            m_fields.Text("preview/ui-role", "Screen role", ref m_uiRole);
+            if (!Model.Story.Nodes.Interface.SystemNodeRules.IsPageRole(m_uiRole)) { EditorUiSession.current.widgets.Hint("The screen role must be a valid game-shell role."); return; }
+            if (ImGui.SmallButton("Close screen preview")) m_uiPage = null;
         }
-        if (m_stage is null && m_uiPage is null) { EditorUiSession.current.widgets.Hint(m_fields.Localize("选择舞台或 UI 页面作为明确预览状态；拖动时间线只求值，不执行游戏动作。")); return; }
+        if (m_stage is null && m_uiPage is null) { EditorUiSession.current.widgets.Hint("Select a stage or UI screen as explicit preview state; scrubbing only evaluates the timeline and does not execute game actions."); return; }
         var ui = new NovelUiPerformance(new() { screens = m_uiPage is null ? [] : [new() { role = m_uiRole, screen = m_uiPage }] });
         var uiChannels = ui.GetChannels();
         string effectTarget = "effect/" + m_effectInstance;
@@ -147,12 +147,12 @@ public sealed class TimelinePanel : EditorPanel, IEditorPanelReloadState
             bool volume = clip.tracks.Any(track => track.target == slot && track.property == PerformanceProperty.Volume);
             string target = m_targets.GetValueOrDefault(slot) ?? (volume ? slot.StartsWith("audio/", StringComparison.Ordinal) ? slot : "audio/" + slot
                 : slot == "camera" ? "camera" : uiChannels.ContainsKey(slot) ? slot : m_effect is not null && slot == effectTarget ? effectTarget : string.Empty);
-            if (volume) m_fields.Text("preview/" + slot, m_fields.Localize("纯预览音量目标 ") + slot, ref target);
-            else m_fields.Select("preview/" + slot, m_fields.Localize("预览绑定 ") + slot, ref target, (m_stage?.layers.Where(_ => clip.tracks.Where(track => track.target == slot).All(track => StagePerformanceController.SupportsStageProperty(track.property)))
+            if (volume) m_fields.Text("preview/" + slot, "Volume-only preview target " + slot, ref target);
+            else m_fields.Select("preview/" + slot, "Preview binding " + slot, ref target, (m_stage?.layers.Where(_ => clip.tracks.Where(track => track.target == slot).All(track => StagePerformanceController.SupportsStageProperty(track.property)))
                     .Select(static layer => ("stage/" + layer.id, layer.name)) ?? [])
-                .Concat(m_stage is null || !clip.tracks.Where(track => track.target == slot).All(track => StagePerformanceController.SupportsStageProperty(track.property, true)) ? [] : new[] { ("camera", m_fields.Localize("镜头")) })
+                .Concat(m_stage is null || !clip.tracks.Where(track => track.target == slot).All(track => StagePerformanceController.SupportsStageProperty(track.property, true)) ? [] : new[] { ("camera", "Camera") })
                 .Concat(ui.targets.Where(item => clip.tracks.Where(track => track.target == slot).All(track => uiChannels[item.id].Contains(track.property))))
-                .Concat(m_effect is not null && clip.tracks.Where(track => track.target == slot).All(track => effectChannels.Contains(track.property)) ? new[] { (effectTarget, "屏幕效果 · " + m_effectInstance) } : []));
+                .Concat(m_effect is not null && clip.tracks.Where(track => track.target == slot).All(track => effectChannels.Contains(track.property)) ? new[] { (effectTarget, "Screen effect · " + m_effectInstance) } : []));
             m_targets[slot] = target;
         }
         if (clip.tracks.Any(track => string.IsNullOrWhiteSpace(m_targets.GetValueOrDefault(track.target)))) return;
@@ -189,50 +189,50 @@ public sealed class TimelinePanel : EditorPanel, IEditorPanelReloadState
             double value = selected.value;
             var interpolation = selected.interpolation;
             var bounds = PerformancePropertyRules.Range(track.property);
-            bool changed = m_fields.Number("clip/key-value", m_fields.Localize("关键帧数值"), ref value, bounds.minimum, bounds.maximum);
-            changed |= m_fields.SelectEnum("clip/key-interpolation", "插值", ref interpolation);
+            bool changed = m_fields.Number("clip/key-value", "Keyframe value", ref value, bounds.minimum, bounds.maximum);
+            changed |= m_fields.SelectEnum("clip/key-interpolation", "Interpolation", ref interpolation);
             PerformanceCurve curve = selected.curve.Copy();
             if (interpolation == PerformanceInterpolation.CubicBezier) changed |= m_curve.Draw(curve); else m_curve.Finish();
-            if (changed) m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("编辑关键帧"), candidate => PerformanceEditService.SetKey(candidate, m_track, m_keyTime, value, interpolation, curve), m_curve.mergeKey);
+            if (changed) m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Edit keyframe", candidate => PerformanceEditService.SetKey(candidate, m_track, m_keyTime, value, interpolation, curve), m_curve.mergeKey);
         }
-        if (ImGui.Button(m_fields.Label("在当前预览时间写入关键帧")))
+        if (ImGui.Button("Write keyframe at current preview time"))
         {
             Finish(); double target = Snap(m_time, clip.duration), value = new PerformancePlayer(clip).Evaluate(target)[m_track].value;
-            m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("写入关键帧"), candidate => PerformanceEditService.SetKey(candidate, m_track, target, value, PerformanceInterpolation.Linear)); m_keyTime = m_time = target;
+            m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Write keyframe", candidate => PerformanceEditService.SetKey(candidate, m_track, target, value, PerformanceInterpolation.Linear)); m_keyTime = m_time = target;
         }
-        if (track.keys.Length > 1 && ImGui.Button(m_fields.Label("删除选中关键帧")))
-        { Finish(); m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("删除关键帧"), candidate => candidate.tracks[m_track].keys = candidate.tracks[m_track].keys.Where(key => key.time != m_keyTime).ToArray()); }
+        if (track.keys.Length > 1 && ImGui.Button("Delete selected keyframe"))
+        { Finish(); m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Delete keyframe", candidate => candidate.tracks[m_track].keys = candidate.tracks[m_track].keys.Where(key => key.time != m_keyTime).ToArray()); }
     }
     private void Markers(PerformanceClipAsset clip)
     {
-        ImGui.SeparatorText(m_fields.Localize("同步标记"));
+        ImGui.SeparatorText("Synchronization markers");
         foreach (var marker in clip.markers)
             if (ImGui.Selectable($"{marker.name} · {marker.time:0.###}s##marker-{marker.id}", m_marker == marker.id)) { Finish(); m_marker = marker.id; m_time = marker.time; }
         if (clip.markers.FirstOrDefault(marker => marker.id == m_marker) is { } selected)
         {
             string name = selected.name; double time = selected.time;
-            bool changed = m_fields.Text("clip/marker-name", m_fields.Localize("标记名称"), ref name);
-            changed |= m_fields.Number("clip/marker-time", m_fields.Localize("标记逻辑时间"), ref time, 0, clip.duration);
-            EditorUiSession.current.widgets.Hint(m_fields.Localize("剧情等待使用稳定标记 ID：") + selected.id);
-            if (changed) m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("编辑演出标记"), candidate => PerformanceEditService.SetMarker(candidate, new() { id = selected.id, name = name, time = time }), m_fields.mergeKey);
-            if (ImGui.Button(m_fields.Label("删除所选标记"))) { Finish(); m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("删除演出标记"), candidate => PerformanceEditService.RemoveMarker(candidate, selected.id)); m_marker = string.Empty; }
+            bool changed = m_fields.Text("clip/marker-name", "Marker name", ref name);
+            changed |= m_fields.Number("clip/marker-time", "Marker logical time", ref time, 0, clip.duration);
+            EditorUiSession.current.widgets.Hint("Story waits use the stable marker ID: " + selected.id);
+            if (changed) m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Edit performance marker", candidate => PerformanceEditService.SetMarker(candidate, new() { id = selected.id, name = name, time = time }), m_fields.mergeKey);
+            if (ImGui.Button("Delete selected marker")) { Finish(); m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Delete performance marker", candidate => PerformanceEditService.RemoveMarker(candidate, selected.id)); m_marker = string.Empty; }
         }
-        if (ImGui.Button(m_fields.Label("在当前时间添加标记")))
+        if (ImGui.Button("Add marker at current time"))
         {
             Finish(); string id = Guid.NewGuid().ToString("N"); double time = Snap(m_time, clip.duration);
-            m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("添加演出标记"), candidate => PerformanceEditService.SetMarker(candidate, new() { id = id, name = "同步点", time = time })); m_marker = id;
+            m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Add performance marker", candidate => PerformanceEditService.SetMarker(candidate, new() { id = id, name = "Sync point", time = time })); m_marker = id;
         }
     }
     private void Range(PerformanceClipAsset clip)
     {
         if (clip.tracks.Length == 0) return;
-        ImGui.SeparatorText(m_fields.Localize("关键帧范围复制"));
-        m_fields.Number("clip/range-start", m_fields.Localize("范围开始"), ref m_rangeStart, 0, clip.duration); m_fields.Number("clip/range-end", m_fields.Localize("范围结束"), ref m_rangeEnd, 0, clip.duration);
-        m_fields.Toggle("clip/range-all", "包含全部轨道（否则所选轨道）", ref m_allTracks); m_fields.Toggle("clip/range-replace", "允许覆盖相同目标时间的关键帧", ref m_replaceRange);
-        if (ImGui.Button(m_fields.Label("复制范围到当前预览时间")))
+        ImGui.SeparatorText("Copy keyframe range");
+        m_fields.Number("clip/range-start", "Range start", ref m_rangeStart, 0, clip.duration); m_fields.Number("clip/range-end", "Range end", ref m_rangeEnd, 0, clip.duration);
+        m_fields.Toggle("clip/range-all", "Include all tracks (otherwise selected track)", ref m_allTracks); m_fields.Toggle("clip/range-replace", "Allow overwriting keyframes at matching target times", ref m_replaceRange);
+        if (ImGui.Button("Copy range to current preview time"))
         {
             Finish(); int[] tracks = m_allTracks ? Enumerable.Range(0, clip.tracks.Length).ToArray() : [m_track]; double destination = Snap(m_time, clip.duration);
-            m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, m_fields.Localize("复制关键帧范围"), candidate => PerformanceEditService.CopyRange(candidate, tracks, m_rangeStart, m_rangeEnd, destination, m_replaceRange));
+            m_documents.Edit<PerformanceClipAsset>(m_toolbar.documentId, "Copy keyframe range", candidate => PerformanceEditService.CopyRange(candidate, tracks, m_rangeStart, m_rangeEnd, destination, m_replaceRange));
         }
     }
     private double Snap(

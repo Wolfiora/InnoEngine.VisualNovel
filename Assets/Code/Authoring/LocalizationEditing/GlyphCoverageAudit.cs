@@ -46,7 +46,7 @@ public sealed class GlyphCoverageAudit : IDisposable
             {
                 if (!m_sources.MoveNext()) { Finish(); break; }
                 source = m_sources.Current; processed++;
-                if (source.font is null || source.font.isMissing) throw new AuthoringValidationException($"当前文字没有可用默认字体。");
+                if (source.font is null || source.font.isMissing) throw new AuthoringValidationException($"This text has no available default font.");
                 string text = source.text;
                 if (source.interpolated)
                 {
@@ -58,11 +58,11 @@ public sealed class GlyphCoverageAudit : IDisposable
                 var layout = m_layout.Build(new(document), source.font, source.size, 16384, resources: source.resources);
                 foreach (var group in layout.missingGlyphs.GroupBy(static missing => (missing.text, missing.ruby)))
                     Add(new(source.textId, source.location, source.assetPath, source.nodeId, group.First().sourceStart, group.Key.text, group.Count(),
-                        group.Key.ruby ? "注音字素在全部字体中缺失。" : "静态文字字素在全部字体中缺失。", false, source.elementId));
+                        group.Key.ruby ? "The ruby grapheme is missing from every font." : "The static text grapheme is missing from every font.", false, source.elementId));
             }
             catch (Exception failure) when (failure is not OutOfMemoryException)
             {
-                Add(new(source?.textId ?? "", source?.location ?? "内容枚举", source?.assetPath ?? default, source?.nodeId ?? "", 0, "", 1, failure.Message, true, source?.elementId ?? ""));
+                Add(new(source?.textId ?? "", source?.location ?? "Content enumeration", source?.assetPath ?? default, source?.nodeId ?? "", 0, "", 1, failure.Message, true, source?.elementId ?? ""));
                 if (source is null) Finish();
             }
         }

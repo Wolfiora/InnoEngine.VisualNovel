@@ -47,7 +47,7 @@ public static class StageCanvasEditService
         Check(stage.width); Check(stage.height); Check(layer.width); Check(layer.height);
         Validate(layer.transform);
         if (stage.width <= 0 || stage.height <= 0 || layer.width <= 0 || layer.height <= 0)
-            throw new AuthoringValidationException($"可编辑舞台和图层需要正数宽高。");
+            throw new AuthoringValidationException($"Editable stages and layers require positive width and height.");
         return new(stage, layer);
     }
     /// <summary>Moves from the frozen origin without accumulating per-frame rounding or changing scale, pivot or rotation.</summary>
@@ -106,7 +106,7 @@ public static class StageCanvasEditService
         if (stage.resourceId != start.resourceId || stage.width != start.width || stage.height != start.height
             || layer.width != start.layerWidth || layer.height != start.layerHeight
             || layer.transform.pivotX != initial.pivotX || layer.transform.pivotY != initial.pivotY)
-            throw new AuthoringValidationException($"舞台尺寸、图层几何或枢轴已经变化，请重新开始画布手势。");
+            throw new AuthoringValidationException($"Stage dimensions, layer geometry or its pivot changed. Restart the canvas gesture.");
         return layer;
     }
     private static void Apply(

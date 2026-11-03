@@ -44,7 +44,8 @@ internal sealed class NovelCaptureRenderer : IDisposable
         {
             if (!context.capabilities.Supports(GraphicsCapability.TextureReadback | GraphicsCapability.TextureBlit)) throw new NotSupportedException("The active graphics host does not support screenshot transfer and readback.");
             var targets = NovelCaptureTargets.Create(request.width, request.height);
-            PersistentTextureHandle texture = context.resourceService.AcquireTexture(id, 1, targets.readback, [], "VN save readback transfer"); acquired = true;
+            RenderTextureSubresourceData[] initial = [new(0, 0, new byte[checked(request.width * request.height * 4)])];
+            PersistentTextureHandle texture = context.resourceService.AcquireTexture(id, 1, targets.readback, initial, "VN save readback transfer"); acquired = true;
             using var mutation = context.graph.BeginMutationScope(); using var names = context.graph.BeginNameScope(id.value);
             var output = context.graph.CreateTexture("Image", targets.image);
             var destination = context.graph.ImportTexture("Readback", texture, targets.readback);
@@ -54,6 +55,7 @@ internal sealed class NovelCaptureRenderer : IDisposable
             var painter = new NovelRasterPainter(context, frame.width, frame.height, material, resources);
             var fit = UiCanvasFit.Create(frame.width, frame.height, new(0, 0, request.width, request.height), true).bounds;
             new NovelImageRenderGraph(context, frame, painter).Present(new((int)fit.x, (int)fit.y, (int)fit.width, (int)fit.height), output);
+            if (frame.uiMeshes.Count > 0) painter.AddMeshes(frame.uiMeshes, output, new((int)fit.x, (int)fit.y, (int)fit.width, (int)fit.height));
             var copy = context.graph.AddCopyPass("Transfer save image", new("inno.vn.capture"), new CopyData(output, destination, request, context.frameIndex), static (value, owner) =>
             { owner.commands.CopyTexture(value.source, value.destination); value.request.MarkDrawn(value.frameIndex); });
             copy.CopyTexture(output, destination); context.graph.MarkOutput(destination); mutation.Commit();

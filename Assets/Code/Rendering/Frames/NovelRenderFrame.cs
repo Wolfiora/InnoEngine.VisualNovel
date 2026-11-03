@@ -37,6 +37,8 @@ public readonly record struct NovelQuadCorners(NumericsVector2 topLeft, Numerics
 /// <param name="quads">Ordered alpha composition commands.</param>
 public sealed record NovelRenderFrame(float width, float height, MaterialAsset material, IReadOnlyList<NovelDrawQuad> quads)
 {
+    /// <summary>Gets ordered foreground triangles produced by the engine UI service.</summary>
+    public IReadOnlyList<NovelDrawMesh> uiMeshes { get; init; } = [];
     /// <summary>Gets the optional pure image graph required for effects and scoped transitions.</summary>
     public NovelImagePlan? image { get; init; }
     /// <summary>Gets the imported premultiplied image-processing material.</summary>

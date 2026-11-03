@@ -19,16 +19,16 @@ public static class UiDataSourceChoices
         NovelValueKind? kind = null,
         bool writable = false,
         UiDataCollectionDefinition? row = null
-    ) => sources.SelectMany(source => source.fields.Where(field => Accept(field, kind, writable)).Select(field => ("custom." + source.id + "." + field.schema.id, "扩展 · " + source.title + " / " + field.schema.label)))
-        .Concat(row?.fields.Where(field => Accept(field, kind, writable)).Select(static field => ("item." + field.schema.id, "当前列表项 · " + field.schema.label)) ?? []);
+    ) => sources.SelectMany(source => source.fields.Where(field => Accept(field, kind, writable)).Select(field => ("custom." + source.id + "." + field.schema.id, "Extension · " + source.title + " / " + field.schema.label)))
+        .Concat(row?.fields.Where(field => Accept(field, kind, writable)).Select(static field => ("item." + field.schema.id, "Current list item · " + field.schema.label)) ?? []);
     /// <summary>Lists declared custom collections.</summary>
     /// <param name="sources">The selected game metadata.</param>
     /// <returns>Collection paths and author-facing names.</returns>
-    public static IEnumerable<(string id, string name)> Rows(UiDataSourceDefinition[] sources) => sources.SelectMany(source => source.collections.Select(collection => ("custom." + source.id + "." + collection.id, "扩展 · " + source.title + " / " + collection.title)));
+    public static IEnumerable<(string id, string name)> Rows(UiDataSourceDefinition[] sources) => sources.SelectMany(source => source.collections.Select(collection => ("custom." + source.id + "." + collection.id, "Extension · " + source.title + " / " + collection.title)));
     /// <summary>Lists declared custom image bindings.</summary>
     /// <param name="sources">The selected game metadata.</param>
     /// <returns>Image paths and labels.</returns>
-    public static IEnumerable<(string id, string name)> Images(UiDataSourceDefinition[] sources) => sources.SelectMany(source => source.images.Select(image => ("custom." + source.id + "." + image, "扩展 · " + source.title + " / " + image)));
+    public static IEnumerable<(string id, string name)> Images(UiDataSourceDefinition[] sources) => sources.SelectMany(source => source.images.Select(image => ("custom." + source.id + "." + image, "Extension · " + source.title + " / " + image)));
     private static bool Accept(
         UiDataFieldDefinition field,
         NovelValueKind? kind,

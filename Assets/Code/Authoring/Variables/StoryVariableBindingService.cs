@@ -20,13 +20,13 @@ public static class StoryVariableBindingService
     ) {
         StoryVariableDeclarations.Validate(table);
         if (table.identity.persistentId == Guid.Empty || table.assetPath.localPath.Length == 0)
-            throw new AuthoringValidationException($"请选择已导入的原生共享变量库。");
+            throw new AuthoringValidationException($"Select an imported native shared-variable library.");
         if (draft.variableTableId != Guid.Empty && draft.variableTableId != table.identity.persistentId)
-            throw new AuthoringValidationException($"更换变量库前，请先解除引用并保留现有声明。");
+            throw new AuthoringValidationException($"Detach the current library and retain its declarations before selecting another library.");
         var shared = table.variables.ToDictionary(static item => item.id, StringComparer.Ordinal);
         foreach (var local in draft.variables.Where(item => shared.ContainsKey(item.id)))
             if (!handOverMatching || !StoryVariableDeclarations.Equivalent(local, shared[local.id]))
-                throw new AuthoringValidationException($"变量归属冲突：{local.id}。仅能在明确选择后移交默认值、作用域与成员完全相同的声明。");
+                throw new AuthoringValidationException($"Variable ownership conflicts: {local.id}. Explicit transfer requires identical default values, scope and members.");
         var retained = draft.variables.Where(item => !shared.ContainsKey(item.id)).Select(VariableValueRules.Copy).ToArray();
         _ = StoryVariableDeclarations.Merge(retained, table);
         draft.variables = retained; draft.variableTableId = table.identity.persistentId; draft.variableTablePath = table.assetPath.ToString();
@@ -44,7 +44,7 @@ public static class StoryVariableBindingService
     public static void ClearMissing(StoryDraftState draft)
     {
         if (draft.variableTableId == Guid.Empty) return;
-        if (draft.ResolveVariableTable() is { isMissing: false }) throw new AuthoringValidationException($"可用变量库应通过解除引用并保留声明处理。");
+        if (draft.ResolveVariableTable() is { isMissing: false }) throw new AuthoringValidationException($"Detach the available library while retaining its declarations.");
         draft.variableTableId = Guid.Empty; draft.variableTablePath = string.Empty;
     }
 }

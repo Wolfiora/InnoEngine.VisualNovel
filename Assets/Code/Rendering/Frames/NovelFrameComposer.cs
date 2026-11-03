@@ -26,6 +26,10 @@ public sealed class NovelFrameComposer
     /// <param name="stage">Optional stage extraction, painted before game UI.</param>
     /// <param name="targetWidth">Optional final design width, independent of the authored page.</param>
     /// <param name="targetHeight">Optional final design height, independent of the authored page.</param>
+    /// <param name="effectsMaterial">Imported material for image effects and transitions.</param>
+    /// <param name="previousUi">An optional frozen previous authored UI frame for an output transition.</param>
+    /// <param name="nativeUi">Optional engine UI geometry, composed before effects that include UI.</param>
+    /// <param name="previousNativeUi">Frozen previous engine UI geometry for an output transition.</param>
     /// <returns>Immutable draw commands in authored order.</returns>
     public NovelRenderFrame Compose(
         UiFrame frame,
@@ -34,7 +38,9 @@ public sealed class NovelFrameComposer
         float? targetWidth = null,
         float? targetHeight = null,
         MaterialAsset? effectsMaterial = null,
-        UiFrame? previousUi = null
+        UiFrame? previousUi = null,
+        IReadOnlyList<NovelDrawMesh>? nativeUi = null,
+        IReadOnlyList<NovelDrawMesh>? previousNativeUi = null
     ) {
         float width = targetWidth ?? frame.width, height = targetHeight ?? frame.height;
         var underlay = PaintUi(frame, width, height, true); var overlay = PaintUi(frame, width, height, false);
@@ -44,8 +50,9 @@ public sealed class NovelFrameComposer
         if (processing && effectsMaterial is null) throw new InvalidOperationException("Screen effects require the game's native image-composition material.");
         return new(width, height, material, Array.AsReadOnly(quads))
         {
+            uiMeshes = processing ? [] : Array.AsReadOnly((nativeUi ?? []).ToArray()),
             effectsMaterial = effectsMaterial,
-            image = processing ? new NovelImagePlanner(PaintUi, PaintStage).Build(stage!, frame, previousUi, width, height) : null
+            image = processing ? new NovelImagePlanner(PaintUi, PaintStage).Build(stage!, frame, previousUi, width, height, nativeUi, previousNativeUi) : null
         };
     }
 
@@ -83,7 +90,7 @@ public sealed class NovelFrameComposer
             }
             if (item.kind == UiElementKind.Toggle)
             {
-                bool flag = item.text == "True" || item.text == "true";
+                bool flag = item.progress >= .5;
                 quads.Add(new(new(item.bounds.x + 8, item.bounds.y + 8, 24, 24), item.clip, flag ? item.focusColor : 0x555C70FF, white));
             }
             if (item.kind is UiElementKind.Slider or UiElementKind.Progress)
@@ -102,7 +109,9 @@ public sealed class NovelFrameComposer
             {
                 NovelDrawQuad quad = quads[index];
                 Matrix matrix = item.presentation ?? Matrix.identity;
-                NovelQuadCorners? corners = quad.corners is { } source ? new(Project(source.topLeft), Project(source.topRight), Project(source.bottomRight), Project(source.bottomLeft)) : null;
+                NovelQuadCorners? corners = quad.corners is { } source ? new(Project(source.topLeft), Project(source.topRight), Project(source.bottomRight), Project(source.bottomLeft))
+                    : item.presentation is not null ? new(Project(new(quad.bounds.x, quad.bounds.y)), Project(new(quad.bounds.x + quad.bounds.width, quad.bounds.y)),
+                        Project(new(quad.bounds.x + quad.bounds.width, quad.bounds.y + quad.bounds.height)), Project(new(quad.bounds.x, quad.bounds.y + quad.bounds.height))) : null;
                 quads[index] = quad with { bounds = UiMotionSampling.Bounds(quad.bounds, matrix), corners = corners,
                     color = quad.color & 0xFFFFFF00 | (uint)Math.Round((quad.color & 255) * item.opacity) };
                 NumericsVector2 Project(NumericsVector2 point)

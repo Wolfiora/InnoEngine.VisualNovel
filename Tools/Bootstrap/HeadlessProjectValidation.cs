@@ -32,7 +32,17 @@ internal static class HeadlessProjectValidation
         string output,
         string dotnet
     ) {
-        project = Owned(repository, project); output = Owned(repository, output);
+        if (operation == "--audit-consumer")
+        {
+            string workspace = Path.GetDirectoryName(Path.GetFullPath(repository))!;
+            string candidate = Path.GetFullPath(project);
+            string[] allowed = [Path.Combine(workspace, "InnoEngine.TestProject"), Path.Combine(workspace, "InnoEngine.Samples", "NeonZero")];
+            if (!allowed.Contains(candidate, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Only the two explicitly authorized consumer projects may be audited in place.");
+            project = candidate; operation = "--audit-scenes";
+        }
+        else project = Owned(repository, project);
+        output = Owned(repository, output);
         string temporary = Path.Combine(repository, "artifacts", "HeadlessValidation", "Temp");
         Directory.CreateDirectory(temporary);
         Environment.SetEnvironmentVariable("TEMP", temporary); Environment.SetEnvironmentVariable("TMP", temporary);
@@ -40,6 +50,7 @@ internal static class HeadlessProjectValidation
         string library = Path.Combine(project, "Library"); Directory.CreateDirectory(library);
         using var engine = new EngineHostBuilder().UseMetadataSources(new DotNetAssemblyCatalogSource(typeof(HeadlessProjectValidation).Assembly,
             typeof(BuildApplication).Assembly, typeof(Inno.Text.Assets.FontImporter).Assembly, typeof(Inno.Audio.Assets.AudioClipImporter).Assembly,
+            typeof(Inno.Adapter.UI.RmlUi.Authoring.RmlUiDocumentFrontend).Assembly,
             System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(Path.GetDirectoryName(typeof(BuildApplication).Assembly.Location)!, "Inno.Scene.Assets.dll"))),
             new ReflectionTypeCatalogSource(), new ReflectionSerializationMetadataSource()).Build();
         var sources = new PluginSourceService(engine.serialization, Path.Combine(project, "Plugins"), library);
@@ -68,6 +79,11 @@ internal static class HeadlessProjectValidation
             assemblyScopes = deployment.assemblyScopes, collectible = true
         }).ToArray())) _ = engine.generations.Execute("VN headless authoring validation", reload, [plugins.CreateReloadChange()]);
         engine.generations.Wait(); assets.CompleteExtensionDiscovery(); assets.Rescan();
+        if (operation == "--audit-scenes")
+        {
+            ExportScripts(result, Path.Combine(Path.GetDirectoryName(output)!, Path.GetFileNameWithoutExtension(output) + "-scripts"));
+            HeadlessSceneAudit.Run(engine, assets, output); return;
+        }
         if (operation == "--scripts")
         {
             result = Compile(compiler); compiler.GenerateProjectFiles();
@@ -103,7 +119,7 @@ internal static class HeadlessProjectValidation
     {
         var result = compiler.CompileAuthoringGenerationAsync().GetAwaiter().GetResult();
         if (!result.success) throw new InvalidOperationException("Formal scripting API compilation failed: " + Environment.NewLine
-            + string.Join(Environment.NewLine, result.diagnostics.Select(static item => item.message)));
+            + string.Join(Environment.NewLine, result.diagnostics.Select(static item => item.filePath + "(" + item.line + "," + item.column + "): " + item.id + " " + item.message)));
         return result;
     }
     private static void ExportScripts(
@@ -112,8 +128,11 @@ internal static class HeadlessProjectValidation
     ) {
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
         using var staging = ProcessOwnedDirectory.CreateAsync(Path.GetDirectoryName(output)!).AsTask().GetAwaiter().GetResult();
-        foreach (string assembly in result.moduleDeployments.Where(static item => item.domain == AssemblyDomain.InnoScripting)
-            .SelectMany(static item => new[] { item.mainAssemblyPath }.Concat(item.preloadAssemblyPaths)).Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (string assembly in result.moduleDeployments
+            .SelectMany(static item => new[] { item.mainAssemblyPath }.Concat(item.preloadAssemblyPaths))
+            .Where(static path => Path.GetFileName(path).StartsWith("Inno.VisualNovel.", StringComparison.Ordinal)
+                || Path.GetFileName(path) is "Inno.GameScripts.dll" or "Inno.EditorScripts.dll")
+            .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             File.Copy(assembly, Path.Combine(staging.directory, Path.GetFileName(assembly)));
             string symbols = Path.ChangeExtension(assembly, ".pdb");

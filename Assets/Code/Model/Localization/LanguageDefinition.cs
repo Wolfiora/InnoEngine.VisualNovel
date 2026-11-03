@@ -11,7 +11,7 @@ public sealed class LanguageDefinition : ISerializable
     /// <summary>Gets or sets the stable language tag.</summary>
     [SerializableProperty] public string id { get; set; } = "zh-CN";
     /// <summary>Gets or sets the language's native display name.</summary>
-    [SerializableProperty] public string name { get; set; } = "简体中文";
+    [SerializableProperty] public string name { get; set; } = "Simplified Chinese";
     /// <summary>Gets or sets the optional language-specific default UI font.</summary>
     [SerializableProperty] public FontAsset? font { get; set; }
     /// <summary>Gets or sets the ordered fallback chain, resolved through the engine text shaper.</summary>

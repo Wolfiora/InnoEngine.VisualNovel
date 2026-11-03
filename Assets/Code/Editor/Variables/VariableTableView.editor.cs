@@ -28,12 +28,12 @@ internal sealed class VariableTableView(
     ) {
         var edits = new VariableEditService(documents.codec);
         if (m_library.Draw(documents, draft, selectNode)) return;
-        ImGui.Text(fields.Localize("变量 ID 在创建后保持稳定；对白中使用 {ID} 插值。"));
-        fields.Text("new-variable-id", fields.Localize("新变量 ID"), ref m_newId);
-        if (ImGui.Button(fields.Label("添加变量 / Add variable")))
+        ImGui.Text("Variable IDs stay stable after creation; use {ID} for dialogue interpolation.");
+        fields.Text("new-variable-id", "New variable ID", ref m_newId);
+        if (ImGui.Button("Add variable"))
         {
             fields.Finish();
-            documents.Edit(documents.activeDocumentId, fields.Localize("添加变量"), state => edits.Add(state,
+            documents.Edit(documents.activeDocumentId, "Add variable", state => edits.Add(state,
                 new() { id = m_newId, name = m_newId, initialValue = NovelValue.Boolean(false) }));
             m_selected = m_newId;
             return;
@@ -43,18 +43,18 @@ internal sealed class VariableTableView(
         if (variable is null) return;
         ImGui.SeparatorText(variable.id);
         if (m_definition.Draw(variable))
-            documents.Edit(documents.activeDocumentId, fields.Localize("编辑变量声明"), state => edits.Update(state, variable), fields.mergeKey);
+            documents.Edit(documents.activeDocumentId, "Edit variable declaration", state => edits.Update(state, variable), fields.mergeKey);
         var references = edits.FindUsages(draft, variable.id);
-        ImGui.SeparatorText(fields.Localize("引用位置"));
+        ImGui.SeparatorText("Reference locations");
         foreach (string nodeId in references)
             if (ImGui.Selectable(nodeId)) { fields.Finish(); selectNode(nodeId); }
         ImGui.BeginDisabled(references.Count > 0);
         try
         {
-            if (ImGui.Button(fields.Label("删除未引用变量 / Remove unused")))
+            if (ImGui.Button("Remove unused variable"))
             {
                 fields.Finish();
-                documents.Edit(documents.activeDocumentId, fields.Localize("删除变量"), state => edits.Remove(state, variable.id));
+                documents.Edit(documents.activeDocumentId, "Delete variable", state => edits.Remove(state, variable.id));
                 m_selected = string.Empty;
             }
         }

@@ -125,6 +125,9 @@ public sealed class UiDocumentInstance
     public string focusedElement => m_focus.id;
     /// <summary>Gets whether the resolved focus owns committed text, suppressing narrative reading shortcuts.</summary>
     public bool textInputFocused => m_order.Any(item => item.id == m_focus.id && item.inputVisible && item.enabled && item.definition.kind == UiElementKind.Input);
+    /// <summary>Gets whether the active focus edits a value and owns reading shortcuts before the narrative.</summary>
+    public bool valueInputFocused => m_order.Any(item => item.id == m_focus.id && item.inputVisible && item.enabled
+        && item.definition.kind is UiElementKind.Input or UiElementKind.Selector or UiElementKind.Slider or UiElementKind.Toggle);
     /// <summary>Reads the active modal search query or full last-resolved input value without exposing its clipped paint window.</summary>
     /// <param name="text">Receives the complete literal value, or empty when no eligible input owns focus.</param>
     /// <returns>Whether a modal selector query or visible enabled text field owns text entry.</returns>
@@ -244,7 +247,7 @@ public sealed class UiDocumentInstance
         if (m_order.Count > 10000 || m_order.Select(static item => item.id).Distinct(StringComparer.Ordinal).Count() != m_order.Count)
             throw new InvalidOperationException("Repeated UI rows exceeded the page budget or produced duplicate identities.");
         Resolve(m_root, true, source, false, includeTransient, true);
-        UiLayoutPass.Measure(m_root, Measure, m_screen.width);
+        UiLayoutPass.Measure(m_root, (box, available) => Measure((UiElementInstance)box, available), m_screen.width);
         UiLayoutPass.Arrange(m_root, new(0, 0, m_screen.width, m_screen.height), new(0, 0, m_screen.width, m_screen.height));
         if (m_initialFocus) { m_initialFocus = false; if (m_screen.initialFocus.Length > 0) m_focus.Focus(m_screen.initialFocus, m_order); }
         m_focus.EnsureValid(m_order);
@@ -276,6 +279,7 @@ public sealed class UiDocumentInstance
             }
             return new UiDrawItem(item.id, definition.kind, item.bounds, item.visualClip, Opacity(color, style.opacity), Opacity(item.enabled ? style.foreground : style.disabledForeground, style.opacity), paintedText,
                 definition.font ?? m_screen.font, style.fontSize, style.textPadding, item.image, m_focus.id == item.id, style.focus,
+                definition.kind == UiElementKind.Toggle ? Read(item, definition.binding, source, out NovelValue toggle) && toggle.kind == NovelValueKind.Boolean && toggle.boolean ? 1 : 0 :
                 definition.maximum > definition.minimum && double.TryParse(item.text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value)
                     ? Math.Clamp((value - definition.minimum) / (definition.maximum - definition.minimum), 0, 1) : 0, style.lineSpacing, definition.imageFit,
                 paintedRich, m_frameTextResources, style.alignment, m_fontScale, item.behindStage, item.bitmap, Opacity(style.imageTint, style.opacity), definition.imageSlice.Copy(), imageBounds, item.presentation, item.visualOpacity, inputPaint);
@@ -487,6 +491,9 @@ public sealed class UiDocumentInstance
         element.image = source.ResolveImage(definition.imageBinding.Length > 0 ? source.ReadImage(definition.imageBinding, element.row) : definition.image);
         element.bitmap = definition.imageBinding.Length > 0 && element.image is null ? source.ReadBitmap(definition.imageBinding, element.row) : null;
         element.text = definition.binding.Length > 0 && Read(element, definition.binding, source, out NovelValue value) ? value.ToString() : source.Localize(definition.textId, definition.text);
+        if (definition.kind == UiElementKind.Toggle) element.text = source.Localize(definition.textId, definition.text);
+        if (definition.kind == UiElementKind.Slider && Read(element, definition.binding, source, out NovelValue number))
+            element.text = number.number.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         element.tooltip = source.Localize(definition.tooltipTextId, definition.tooltip);
         if (definition.tooltipBinding.Length > 0 && Read(element, definition.tooltipBinding, source, out NovelValue help))
         {

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Inno.Core.Serialization;
+using Inno.Core.Input;
 using Inno.Storage;
 using Inno.VisualNovel.Authoring.Preview;
 using Inno.VisualNovel.Authoring.Templates;
@@ -39,11 +40,25 @@ internal static class ProfileContracts
             Check(profile.ready && profile.error.Length > 0 && before.All(pair => storage.packets[pair.Key].AsSpan().SequenceEqual(pair.Value)), "A failed atomic profile write damaged a valid profile or blocked gameplay.");
             int writes = storage.writes; profile.Poll(10); Check(storage.writes == writes, "A failed profile write retried continuously without player intent.");
             storage.failWrites = false; profile.Retry(); profile.Poll(); Poll(profile); Check(profile.error.Length == 0, "Explicit profile retry did not recover.");
+            foreach (Action change in new Action[] {
+                () => session.preferences.highContrast = true,
+                () => session.preferences.SetCharacterVoice(new() { characterId = "speaker", enabled = false, volume = .35 }),
+                () => session.preferences.holdSkipModifiers = KeyModifier.Alt,
+                () => { var bindings = session.preferences.keyboardShortcuts; bindings[0].key = KeyCode.Unknown; session.preferences.keyboardShortcuts = bindings; },
+                () => { var bindings = session.preferences.navigationShortcuts; bindings[0].key = KeyCode.Unknown; session.preferences.navigationShortcuts = bindings; }
+            })
+            {
+                int beforeChange = storage.writes; change(); profile.Poll(1); Poll(profile);
+                Check(storage.writes == beforeChange + 2, "An independent accessibility, voice or keyboard preference did not trigger persistence.");
+            }
         }
         using var restored = new NovelSession(game); using var loaded = new PlayerProfileController(restored, store); Poll(loaded);
         Check(loaded.ready && !restored.preferences.allowFlashing && restored.preferences.textSpeed == 2 && restored.preferences.fontScale == 1.5
             && restored.CaptureProgress().variables.Single().value.boolean && restored.CaptureProgress().readContent.Length == 1, "Global progress and preferences did not survive independent native persistence.");
         Check(nativeCodec.ownerViolations == 0, "Profile serialization ran outside its owner thread.");
+        Check(restored.preferences.highContrast && !restored.preferences.GetCharacterVoice("speaker").enabled
+            && restored.preferences.holdSkipModifiers == KeyModifier.Alt && restored.preferences.keyboardShortcuts[0].key == KeyCode.Unknown
+            && restored.preferences.navigationShortcuts[0].key == KeyCode.Unknown, "Independent preferences were not restored from the native packet.");
     }
 
     internal static void StartupGateAndLateRead(

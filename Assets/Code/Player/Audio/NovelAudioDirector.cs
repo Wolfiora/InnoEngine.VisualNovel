@@ -232,12 +232,13 @@ public sealed class NovelAudioDirector : IDisposable
         m_voices = candidate; m_duck = snapshot.duckGain; m_slotMix = nextMix;
     }
 
-    /// <summary>Releases every native voice owned by this session.</summary>
+    /// <summary>Releases every native voice and an explicitly disposable output owned by this session.</summary>
     public void Dispose()
     {
         if (m_disposed) return;
         foreach (Voice voice in m_voices) m_output.Stop(voice.token);
         m_voices.Clear(); m_disposed = true;
+        if (m_output is IDisposable lifetime) lifetime.Dispose();
     }
 
     private void FadeOut(Voice voice)

@@ -15,7 +15,7 @@ internal sealed class NovelValueView(StoryInspectorFields fields)
     ) {
         bool changed = false;
         NovelValueKind kind = value.kind;
-        if (chooseKind && fields.SelectEnum(id + "/kind", "类型 / Type", ref kind))
+        if (chooseKind && fields.SelectEnum(id + "/kind", "Type", ref kind))
         {
             value = Default(kind); changed = true;
         }
@@ -23,22 +23,22 @@ internal sealed class NovelValueView(StoryInspectorFields fields)
         {
             case NovelValueKind.Boolean:
                 bool flag = value.boolean;
-                if (fields.Toggle(id, "值 / Value", ref flag)) { value = NovelValue.Boolean(flag); changed = true; }
+                if (fields.Toggle(id, "Value", ref flag)) { value = NovelValue.Boolean(flag); changed = true; }
                 break;
             case NovelValueKind.Integer:
                 long integer = value.integer;
-                if (fields.Integer(id, "值 / Value", ref integer)) { value = NovelValue.Integer(integer); changed = true; }
+                if (fields.Integer(id, "Value", ref integer)) { value = NovelValue.Integer(integer); changed = true; }
                 break;
             case NovelValueKind.Number:
                 double number = value.number;
-                if (fields.Number(id, fields.Localize("值 / Value"), ref number)) { value = NovelValue.Number(number); changed = true; }
+                if (fields.Number(id, "Value", ref number)) { value = NovelValue.Number(number); changed = true; }
                 break;
             case NovelValueKind.String:
             case NovelValueKind.Enum:
                 string text = value.text;
                 bool edited = value.kind == NovelValueKind.Enum && enumMembers is { Length: > 0 }
-                    ? fields.Select(id, fields.Localize("值 / Value"), ref text, enumMembers.Select(static item => (item, item)))
-                    : fields.Text(id, fields.Localize("值 / Value"), ref text);
+                    ? fields.Select(id, "Value", ref text, enumMembers.Select(static item => (item, item)))
+                    : fields.Text(id, "Value", ref text);
                 if (edited && (value.kind != NovelValueKind.Enum || !string.IsNullOrWhiteSpace(text)))
                 {
                     value = value.kind == NovelValueKind.Enum ? NovelValue.Enum(text) : NovelValue.String(text); changed = true;
@@ -47,7 +47,7 @@ internal sealed class NovelValueView(StoryInspectorFields fields)
             case NovelValueKind.List:
                 NovelValueKind elementKind = value.elementKind;
                 string type = elementKind.ToString();
-                if (chooseKind && fields.Select(id + "/element-kind", fields.Localize("元素类型"), ref type,
+                if (chooseKind && fields.Select(id + "/element-kind", "Element type", ref type,
                     Enum.GetValues<NovelValueKind>().Where(static item => item != NovelValueKind.List).Select(static item => (item.ToString(), item.ToString()))))
                 {
                     elementKind = Enum.Parse<NovelValueKind>(type);
@@ -57,13 +57,13 @@ internal sealed class NovelValueView(StoryInspectorFields fields)
                 int remove = -1;
                 for (int index = 0; index < items.Length; index++)
                 {
-                    if (!ImGui.CollapsingHeader(fields.Caption($"第 {index + 1} 项##{id}/{index}", fields.Format("第 {0} 项##{1}/{2}", index + 1, id, index)))) continue;
+                    if (!ImGui.CollapsingHeader(string.Format(System.Globalization.CultureInfo.InvariantCulture,"Item {0}##{1}/{2}", index + 1, id, index))) continue;
                     NovelValue item = items[index];
                     if (Draw(id + "/" + index, ref item, false, enumMembers)) { items[index] = item; changed = true; }
-                    if (ImGui.Button(fields.Caption("删除此项##" + id + "/" + index, fields.Localize("删除此项##") + id + "/" + index))) { fields.Finish(); remove = index; changed = true; }
+                    if (ImGui.Button("Remove item##" + id + "/" + index)) { fields.Finish(); remove = index; changed = true; }
                 }
                 if (remove >= 0) items = items.Where((_, index) => index != remove).ToArray();
-                if (ImGui.Button(fields.Caption("添加列表项##" + id, fields.Localize("添加列表项##") + id)))
+                if (ImGui.Button("Add list item##" + id))
                 {
                     fields.Finish(); items = [.. items, elementKind == NovelValueKind.Enum && enumMembers is { Length: > 0 } ? NovelValue.Enum(enumMembers[0]) : Default(elementKind)]; changed = true;
                 }

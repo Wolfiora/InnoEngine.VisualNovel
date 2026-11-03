@@ -19,12 +19,12 @@ internal sealed class VoiceBatchLanguage(
         string sourceName = SourceName(line);
         if (!localized) return (sourceName, line.text, line.voiceCueId, "");
         if (table is null || !table.languages.Any(item => item.id == language) || language == table.sourceLanguage)
-            return (sourceName, "", "", "目标语言未在翻译表声明。");
+            return (sourceName, "", "", "The target language is not declared in the translation table.");
         var row = table.entries.SingleOrDefault(item => item.id == StoryTextKeys.Dialogue(line.textId));
         var translation = row?.translations.SingleOrDefault(item => item.language == language);
         if (row is null || row.source != line.text || translation is null || translation.status == TranslationStatus.Draft
             || translation.sourceFingerprint != NovelLocalizationService.Fingerprint(line.text))
-            return (sourceName, translation?.text ?? "", translation?.voiceCueId ?? "", "目标译文缺失、待审核或原文已更新，先完成翻译复核。");
+            return (sourceName, translation?.text ?? "", translation?.voiceCueId ?? "", "The translation is missing, unreviewed or outdated. Review the translation first.");
         try { NovelLocalizationService.RequireMatchingPlaceholders(line.text, translation.text); }
         catch (InvalidOperationException failure) { return (sourceName, translation.text, translation.voiceCueId, failure.Message); }
         string speaker = sourceName;

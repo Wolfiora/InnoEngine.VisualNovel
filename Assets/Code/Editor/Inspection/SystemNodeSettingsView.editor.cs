@@ -22,30 +22,30 @@ internal sealed class SystemNodeSettingsView(
         GraphNodeRecord node
     ) {
         SystemNode action = documents.codec.Read<SystemNode>(node); string id = node.id.value, operation = action.operation.ToString();
-        bool changed = fields.Select(id + "/operation", fields.Localize("游戏系统动作"), ref operation, new[]
-        { ("OpenPage", fields.Localize("打开页面并暂停剧情")), ("SetTheme", fields.Localize("切换主题")), ("ReturnTitle", fields.Localize("返回标题并暂停剧情")), ("Checkpoint", fields.Localize("创建命名检查点")), ("AutoSave", fields.Localize("保存到自动槽")), ("RollbackBarrier", fields.Localize("设置回滚屏障")) });
+        bool changed = fields.Select(id + "/operation", "Game system action", ref operation, new[]
+        { ("OpenPage", "Open screen and suspend story"), ("SetTheme", "Switch theme"), ("ReturnTitle", "Return to title and suspend story"), ("Checkpoint", "Create named checkpoint"), ("AutoSave", "Save to automatic slot"), ("RollbackBarrier", "Set rollback barrier") });
         if (changed)
         { action.operation = Enum.Parse<SystemOperation>(operation); action.argument = action.operation switch
-            { SystemOperation.OpenPage => "settings", SystemOperation.Checkpoint => "checkpoint", SystemOperation.RollbackBarrier => "不可逆剧情操作", _ => string.Empty }; }
+            { SystemOperation.OpenPage => "settings", SystemOperation.Checkpoint => "checkpoint", SystemOperation.RollbackBarrier => "Irreversible story operation", _ => string.Empty }; }
         if (action.operation is SystemOperation.Checkpoint or SystemOperation.RollbackBarrier)
-        { string argument = action.argument; changed |= fields.Text(id + "/boundary", action.operation == SystemOperation.Checkpoint ? fields.Localize("检查点名称") : fields.Localize("屏障原因"), ref argument); action.argument = argument; }
+        { string argument = action.argument; changed |= fields.Text(id + "/boundary", action.operation == SystemOperation.Checkpoint ? "Checkpoint name" : "Barrier reason", ref argument); action.argument = argument; }
         if (action.operation == SystemOperation.OpenPage)
         {
             var game = NovelResourceSelection.Get<NovelProjectAsset>(interactions);
-            var options = fields.BuiltIn(BuiltInUiChoices.Pages).Concat(game?.screens.Select(static binding => (binding.role, binding.role)) ?? []).DistinctBy(static item => item.Item1);
-            string role = action.argument; changed |= fields.Select(id + "/page", fields.Localize("目标页面"), ref role, options);
-            if (ImGui.CollapsingHeader(fields.Caption("自定义页面角色##" + id, fields.Localize("自定义页面角色##") + id))) changed |= fields.Text(id + "/custom-page", fields.Localize("已关联的自定义角色"), ref role);
+            var options = BuiltInUiChoices.Pages.Concat(game?.screens.Select(static binding => (binding.role, binding.role)) ?? []).DistinctBy(static item => item.Item1);
+            string role = action.argument; changed |= fields.Select(id + "/page", "Target screen", ref role, options);
+            if (ImGui.CollapsingHeader("Custom screen role##" + id)) changed |= fields.Text(id + "/custom-page", "Linked custom role", ref role);
             action.argument = role;
         }
         if (action.operation == SystemOperation.SetTheme)
         {
             string theme = action.argument; var game = NovelResourceSelection.Get<NovelProjectAsset>(interactions);
-            if (game is not null) changed |= fields.Select(id + "/theme", fields.Localize("游戏主题"), ref theme, new[] { (string.Empty, fields.Localize("页面自身样式")) }.Concat(game.themes.Select(static item => (item.resourceId, item.title))));
-            else changed |= fields.Text(id + "/theme-id", fields.Localize("主题资源 ID（空为页面样式）"), ref theme);
-            if (NovelResourceSelection.Get<ThemeAsset>(interactions) is { } selected && ImGui.Button(fields.Label("使用所选主题"))) { fields.Finish(); theme = selected.resourceId; changed = true; }
+            if (game is not null) changed |= fields.Select(id + "/theme", "Game theme", ref theme, new[] { (string.Empty, "Screen's own styling") }.Concat(game.themes.Select(static item => (item.resourceId, item.title))));
+            else changed |= fields.Text(id + "/theme-id", "Theme resource ID (empty for screen styling)", ref theme);
+            if (NovelResourceSelection.Get<ThemeAsset>(interactions) is { } selected && ImGui.Button("Use selected theme")) { fields.Finish(); theme = selected.resourceId; changed = true; }
             action.argument = theme;
         }
-        if (changed) documents.Edit(documents.activeDocumentId, fields.Localize("编辑游戏系统动作"), draft => documents.edits.SetSettings(draft, node.id, action), fields.mergeKey);
-        EditorUiSession.current.widgets.Hint(fields.Localize("页面、检查点和自动保存先提交系统动作，再停在下一条指令之前；恢复不会重放当前动作。显式自动保存需要原生持久化服务。主题随存档和回滚恢复，并行演出中禁止修改会话系统状态。"));
+        if (changed) documents.Edit(documents.activeDocumentId, "Edit game system action", draft => documents.edits.SetSettings(draft, node.id, action), fields.mergeKey);
+        EditorUiSession.current.widgets.Hint("Screens, checkpoints and automatic saves commit their system action before stopping ahead of the next instruction. Restoration does not repeat the action. Explicit automatic saving requires native persistence. Themes restore with saves and rollback. Parallel presentation cannot modify session system state.");
     }
 }

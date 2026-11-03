@@ -37,20 +37,20 @@ internal sealed class StageCanvasGestures(
     internal void Toolbar(StageAsset stage)
     {
         string tool = m_tool.ToString();
-        if (fields.Select("stage/canvas-tool", fields.Localize("画布工具"), ref tool,
-            new[] { (nameof(Tool.Move), fields.Localize("移动图层")), (nameof(Tool.Scale), fields.Localize("等比缩放")), (nameof(Tool.Rotate), fields.Localize("旋转")) }))
+        if (fields.Select("stage/canvas-tool", "Canvas tools", ref tool,
+            new[] { (nameof(Tool.Move), "Move layer"), (nameof(Tool.Scale), "Uniform scale"), (nameof(Tool.Rotate), "Rotate") }))
         { Finish(); m_tool = Enum.Parse<Tool>(tool); }
-        if (ImGui.Checkbox(fields.Label("舞台吸附"), ref m_snap)) Finish();
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Caption("网格 " + m_grid + " px", fields.Localize("网格 ") + m_grid + " px"))) { Finish(); m_grid = m_grid >= 32 ? 4 : m_grid * 2; }
-        ImGui.Checkbox(fields.Label("显示构图安全区"), ref m_safeArea);
+        if (ImGui.Checkbox("Stage snapping", ref m_snap)) Finish();
+        ImGui.SameLine(); if (ImGui.SmallButton("Grid " + m_grid + " px")) { Finish(); m_grid = m_grid >= 32 ? 4 : m_grid * 2; }
+        ImGui.Checkbox("Show composition safe area", ref m_safeArea);
         if (m_safeArea)
         {
             double maximum = Math.Max(0, (Math.Min(stage.width, stage.height) - 1) / 2);
             m_safeMargin = Math.Clamp(m_safeMargin, 0, maximum);
-            fields.Number("stage/safe-margin", fields.Localize("安全参考边距（px）"), ref m_safeMargin, 0, maximum);
+            fields.Number("stage/safe-margin", "Safe area margin (px)", ref m_safeMargin, 0, maximum);
         }
-        EditorUiSession.current.widgets.Hint(m_tool == Tool.Move ? fields.Localize("拖动图层；方向键微调 1 px，Shift 为 10 px，Alt 暂停吸附，Esc 取消当前拖动。")
-            : m_tool == Tool.Scale ? fields.Localize("拖动右下角方形柄，相对作者枢轴等比缩放，保留镜像；Esc 取消。") : fields.Localize("拖动上方圆形柄旋转；吸附时每 15°，Alt 自由旋转，Esc 取消。"));
+        EditorUiSession.current.widgets.Hint(m_tool == Tool.Move ? "Drag a layer; arrow keys move 1 px, Shift moves 10 px, Alt suspends snapping, and Esc cancels the drag."
+            : m_tool == Tool.Scale ? "Drag the bottom-right square to scale uniformly around the authored pivot, preserving mirroring; Esc cancels." : "Drag the upper circle to rotate in 15° snap increments; Alt enables free rotation and Esc cancels.");
     }
     internal void Draw(
         Guid document,
@@ -138,8 +138,8 @@ internal sealed class StageCanvasGestures(
             if (dx != 0 || dy != 0)
             {
                 fields.Finish(); var start = StageCanvasEditService.Capture(stage, selected);
-                m_nudge ??= new(interactions.history, "微调舞台图层"); m_nudgeDocument = document; m_nudgeLayer = selected;
-                try { documents.Edit<StageAsset>(document, fields.Localize("微调舞台图层"), candidate => StageCanvasEditService.Move(candidate, start, dx, dy), m_nudge.mergeKey); m_nudgeRevision = documents.GetRevision(document); }
+                m_nudge ??= new(interactions.history, "Nudge stage layer"); m_nudgeDocument = document; m_nudgeLayer = selected;
+                try { documents.Edit<StageAsset>(document, "Nudge stage layer", candidate => StageCanvasEditService.Move(candidate, start, dx, dy), m_nudge.mergeKey); m_nudgeRevision = documents.GetRevision(document); }
                 catch { FinishNudge(); throw; }
             }
         }
@@ -152,7 +152,7 @@ internal sealed class StageCanvasGestures(
             m_scale = scale; m_distance = distance; m_angle = Angle(local, start); m_drag = new(interactions.history, Label());
         }
     }
-    private string Label() => m_tool == Tool.Move ? "移动舞台图层" : m_tool == Tool.Scale ? "缩放舞台图层" : "旋转舞台图层";
+    private string Label() => m_tool == Tool.Move ? "Move stage layer" : m_tool == Tool.Scale ? "Scale stage layer" : "Rotate stage layer";
     private static double Distance(
         Vector2 point,
         StageCanvasTransformStart start

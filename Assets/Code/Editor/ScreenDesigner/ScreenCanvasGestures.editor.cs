@@ -44,27 +44,27 @@ internal sealed class ScreenCanvasGestures(
         string selected,
         bool editable
     ) {
-        if (ImGui.Checkbox(fields.Label("网格吸附"), ref m_snap)) Finish();
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Caption("网格 " + m_grid + " px", fields.Localize("网格 ") + m_grid + " px"))) { Finish(); m_grid = m_grid >= 32 ? 4 : m_grid * 2; }
-        ImGui.SameLine(); if (ImGui.Checkbox(fields.Label("显示网格"), ref m_showGrid)) Finish();
+        if (ImGui.Checkbox("Snap to grid", ref m_snap)) Finish();
+        ImGui.SameLine(); if (ImGui.SmallButton("Grid " + m_grid + " px")) { Finish(); m_grid = m_grid >= 32 ? 4 : m_grid * 2; }
+        ImGui.SameLine(); if (ImGui.Checkbox("Show grid", ref m_showGrid)) Finish();
         var row = ScreenEditService.Flatten(screen).FirstOrDefault(item => item.element.id == selected);
         var item = frame.items.LastOrDefault(item => item.id == selected);
         if (!editable || row.parent?.kind != UiElementKind.Panel || item is null) return;
-        fields.Select("canvas/alignment", fields.Localize("对齐方式"), ref m_alignment,
-            new[] { (nameof(UiCanvasAlignment.Left), fields.Localize("左边")), (nameof(UiCanvasAlignment.HorizontalCenter), fields.Localize("水平居中")), (nameof(UiCanvasAlignment.Right), fields.Localize("右边")),
-                (nameof(UiCanvasAlignment.Top), fields.Localize("上边")), (nameof(UiCanvasAlignment.VerticalCenter), fields.Localize("垂直居中")), (nameof(UiCanvasAlignment.Bottom), fields.Localize("下边")) });
-        if (ImGui.Checkbox(fields.Label("相对于父容器内容区"), ref m_alignParent)) Finish();
-        ImGui.SameLine(); if (!ImGui.SmallButton(fields.Label("应用对齐"))) return;
+        fields.Select("canvas/alignment", "Alignment", ref m_alignment,
+            new[] { (nameof(UiCanvasAlignment.Left), "Left edge"), (nameof(UiCanvasAlignment.HorizontalCenter), "Horizontal center"), (nameof(UiCanvasAlignment.Right), "Right edge"),
+                (nameof(UiCanvasAlignment.Top), "Top edge"), (nameof(UiCanvasAlignment.VerticalCenter), "Vertical center"), (nameof(UiCanvasAlignment.Bottom), "Bottom edge") });
+        if (ImGui.Checkbox("Relative to parent content area", ref m_alignParent)) Finish();
+        ImGui.SameLine(); if (!ImGui.SmallButton("Apply alignment")) return;
         Finish(); fields.Finish();
         Rect reference = new(0, 0, frame.width, frame.height);
         if (m_alignParent)
         {
-            var parent = frame.items.LastOrDefault(item => item.id == row.parent.id) ?? throw new InvalidOperationException(fields.Localize("父元素没有可用的设计预览，请检查显隐和示例数据。"));
+            var parent = frame.items.LastOrDefault(item => item.id == row.parent.id) ?? throw new InvalidOperationException("The parent has no available design preview. Check its visibility and sample data.");
             float padding = row.parent.layout.padding;
             reference = new(parent.bounds.x + padding, parent.bounds.y + padding, Math.Max(0, parent.bounds.width - 2 * padding), Math.Max(0, parent.bounds.height - 2 * padding));
         }
         var start = UiCanvasEditService.Capture(screen, selected, item.bounds); var alignment = Enum.Parse<UiCanvasAlignment>(m_alignment);
-        documents.Edit<ScreenAsset>(document, fields.Localize("对齐 UI 控件"), candidate => UiCanvasEditService.Align(candidate, start, reference, alignment));
+        documents.Edit<ScreenAsset>(document, "Align UI control", candidate => UiCanvasEditService.Align(candidate, start, reference, alignment));
     }
     internal void Draw(
         Guid document,
@@ -139,8 +139,8 @@ internal sealed class ScreenCanvasGestures(
             {
                 var start = UiCanvasEditService.Capture(screen, selected, selectedItem.bounds);
                 fields.Finish();
-                m_nudge ??= new EditorEditGesture(interactions.history, "微调 UI 控件"); m_nudgeDocument = document; m_nudgeElement = selected;
-                try { documents.Edit<ScreenAsset>(document, fields.Localize("微调 UI 控件"), candidate => UiCanvasEditService.Transform(candidate, start, dx, dy), m_nudge.mergeKey); m_nudgeRevision = documents.GetRevision(document); }
+                m_nudge ??= new EditorEditGesture(interactions.history, "Nudge UI control"); m_nudgeDocument = document; m_nudgeElement = selected;
+                try { documents.Edit<ScreenAsset>(document, "Nudge UI control", candidate => UiCanvasEditService.Transform(candidate, start, dx, dy), m_nudge.mergeKey); m_nudgeRevision = documents.GetRevision(document); }
                 catch { FinishNudge(); throw; }
             }
         }
@@ -191,5 +191,5 @@ internal sealed class ScreenCanvasGestures(
     private static bool Control() => ImGui.IsKeyDown(ImGuiKey.LeftCtrl) || ImGui.IsKeyDown(ImGuiKey.RightCtrl) || ImGui.IsKeyDown(ImGuiKey.LeftSuper) || ImGui.IsKeyDown(ImGuiKey.RightSuper);
     private static bool Alt() => ImGui.IsKeyDown(ImGuiKey.LeftAlt) || ImGui.IsKeyDown(ImGuiKey.RightAlt);
     private static bool Arrows() => ImGui.IsKeyDown(ImGuiKey.LeftArrow) || ImGui.IsKeyDown(ImGuiKey.RightArrow) || ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.DownArrow);
-    private static string Label(UiResizeEdges edges) => edges == UiResizeEdges.None ? "移动 UI 控件" : "缩放 UI 控件";
+    private static string Label(UiResizeEdges edges) => edges == UiResizeEdges.None ? "Move UI control" : "Resize UI control";
 }

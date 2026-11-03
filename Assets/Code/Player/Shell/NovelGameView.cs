@@ -46,6 +46,7 @@ public sealed class NovelGameView : IDisposable
     private UiPageExit? m_outgoing;
     private bool m_pointerHeld;
     private bool m_discardPointer;
+    private bool m_readingNavigation;
     /// <summary>Gets independent startup/global/settings IO, absent when the host has no native codec.</summary>
     public PlayerProfileController? profile { get; }
     private string ActiveRole => profile is { ready: false } ? "loading" : m_session.page;
@@ -96,10 +97,24 @@ public sealed class NovelGameView : IDisposable
     public SaveSlotController? persistence { get; }
     /// <summary>Gets the displayed session, including an isolated replay when active.</summary>
     public NovelSession activeSession => m_replayView?.activeSession ?? m_session;
+    /// <summary>Gets the displayed owner's typed data for native scene bindings, without constructing another UI document tree.</summary>
+    public UI.Binding.UiDataSource dataSource => m_replayView?.dataSource ?? m_source;
     /// <summary>Gets the latest source-addressed custom action diagnostic without throwing through the renderer.</summary>
     public string actionError => m_replayView?.actionError ?? m_uiActions.error;
     /// <summary>Gets the latest custom binding diagnostic, including its exact authored path.</summary>
     public string dataSourceError => m_replayView?.dataSourceError ?? m_dataSources.error;
+    /// <summary>Dispatches one already-consumed native control action through the same shell policies as authored pages.</summary>
+    /// <param name="action">The exact typed action produced by a live control; input must not also advance the story.</param>
+    public void InvokeAction(UiActionRequest action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (m_replayView is not null) { m_replayView.InvokeAction(action); return; }
+        Synchronize(); SynchronizeInputOwner();
+        m_source.pageRole = ActiveRole; m_session.pageState.Enter(ActiveRole);
+        if (!m_source.CanInvoke(action)) return;
+        m_session.SetSkippingHeld(false, false);
+        Dispatch(action); m_automaticSave.Observe();
+    }
     /// <summary>Advances only the displayed owner; the caller's narrative, stage and audio remain suspended during replay.</summary>
     /// <param name="seconds">The nonnegative logical time interval.</param>
     public void Tick(double seconds)
@@ -189,9 +204,17 @@ public sealed class NovelGameView : IDisposable
         m_pointerHeld = !input.released && (input.pressed || input.held);
         m_source.pageRole = ActiveRole; m_session.pageState.Enter(ActiveRole);
         PreparePresentation(ActiveRole);
+        if (input.pressed) m_readingNavigation = false;
+        if (input.next || input.previous || input.increment || input.decrement || input.pageUp || input.pageDown) m_readingNavigation = true;
+        if (ActiveRole == "reading" && !m_readingNavigation && !input.composing && input.readingShortcut.Length == 0 && (input.space || input.confirm)
+            && m_session.interactiveStory?.status == Narrative.Execution.StoryStatus.Dialogue
+            && !m_screens[ActiveRole].popupOpen && !m_screens[ActiveRole].valueInputFocused)
+        {
+            m_session.SetSkippingHeld(false, false); m_session.Advance(); m_automaticSave.Observe(); return;
+        }
         UiInputResult result = m_screens[ActiveRole].HandleInput(input, m_source);
         m_session.SetSkippingHeld(input.skipHeld, ActiveRole == "reading" && !input.composing && !input.cancel && !input.confirm && !input.space
-            && !input.pressed && !input.released && input.readingShortcut.Length == 0 && result.actions.Count == 0 && !m_screens[ActiveRole].popupOpen && !m_screens[ActiveRole].textInputFocused);
+            && !input.pressed && !input.released && input.readingShortcut.Length == 0 && result.actions.Count == 0 && !m_screens[ActiveRole].popupOpen && !m_screens[ActiveRole].valueInputFocused);
         if (result.actions.Count > 0)
         {
             foreach (UiActionRequest action in result.actions) Dispatch(action);
@@ -201,7 +224,7 @@ public sealed class NovelGameView : IDisposable
         if (profile is { ready: false }) return;
         if (input.composing) return;
         if (!result.consumed && !input.cancel && !input.confirm && !input.space && !input.pressed && !input.released
-            && !m_screens[ActiveRole].popupOpen && !m_screens[ActiveRole].textInputFocused && TryReadingShortcut(input.readingShortcut))
+            && !m_screens[ActiveRole].popupOpen && !m_screens[ActiveRole].valueInputFocused && TryReadingShortcut(input.readingShortcut))
         { m_automaticSave.Observe(); return; }
         if (input.cancel && !result.cancelConsumed)
         {
@@ -445,6 +468,7 @@ public sealed class NovelGameView : IDisposable
             m_outgoing = previous.BeginExit();
         }
         m_screens[ActiveRole].Enter();
+        m_readingNavigation = false;
         m_discardPointer |= m_pointerHeld; m_inputRole = ActiveRole;
     }
 

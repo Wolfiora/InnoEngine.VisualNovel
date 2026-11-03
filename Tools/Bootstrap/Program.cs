@@ -58,7 +58,7 @@ internal static class Program
         Write("Player", ScriptAssemblyScope.Runtime, ["Model", "Narrative", "Stage", "UI"]);
         Write("Rendering", ScriptAssemblyScope.Runtime, ["Model", "Stage", "UI"]);
         Write("Integration", ScriptAssemblyScope.Runtime, ["Model", "Player", "Rendering", "Narrative", "Stage", "UI"]);
-        Write("Authoring", ScriptAssemblyScope.Editor, ["Model", "Compiler", "Narrative", "Stage", "Player", "UI"]);
+        Write("Authoring", ScriptAssemblyScope.Editor, ["Model", "Compiler", "Narrative", "Stage", "Player", "UI", "Integration"]);
         Write("Editor", ScriptAssemblyScope.Editor, ["Model", "Compiler", "Narrative", "Authoring", "Integration", "UI", "Stage", "Player"]);
         using (AssetExecutionContext.EnterScope(assets)) ShaderBootstrap.Ensure(assets, serialization);
         string projectSettings = Path.Combine(root, "Settings.Project.inno");

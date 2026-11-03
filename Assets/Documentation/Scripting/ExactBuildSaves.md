@@ -2,7 +2,7 @@
 
 `NovelSession.buildFingerprint` 包含游戏内容、已知运行代码、明确登记的扩展实现与宿主贡献。创建 `SaveService` 时使用该值，不能用 `NovelProjectAsset.buildFingerprint` 代替。后者仍是导入时的内容摘要。
 
-原生 `NovelPlayerComponent` 在 Scene/GameObject 生命周期中完成同一配置与匹配。`ConfigureCommands`、`ConfigureUiActions`、`ConfigureUiDataSources` 必须在会话启动前调用。注册声明和实现被会话冻结，之后修改调用方注册表只影响新会话。
+原生 `NovelSceneSystem` 在 Scene/GameObject 生命周期中完成同一配置与匹配。`ConfigureCommands`、`ConfigureUiActions`、`ConfigureUiDataSources` 必须在会话启动前调用。注册声明和实现被会话冻结，之后修改调用方注册表只影响新会话。
 
 直接嵌入会话时，把 UI 注册放在 `NovelSessionOptions`：
 

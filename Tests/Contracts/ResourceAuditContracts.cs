@@ -85,7 +85,7 @@ internal static class ResourceAuditContracts
                 "Byte duplicates or expected authoring-only exclusion were misreported.");
             Check(report.items.Single(item => item.path.localPath == "Labels.ivnlabels").use == ResourceAuditUse.AuthoringOnly,
                 "Editor resource labels were reported as unused Player content.");
-            Check(report.NoticesText().Contains("Exact notice\r\nSecond line", StringComparison.Ordinal) && report.ToMarkdown().Contains("不删除文件", StringComparison.Ordinal), "Notice export changed its body or implied destructive automatic cleanup.");
+            Check(report.NoticesText().Contains("Exact notice\r\nSecond line", StringComparison.Ordinal) && report.ToMarkdown().Contains("does not delete files", StringComparison.Ordinal), "Notice export changed its body or implied destructive automatic cleanup.");
         }
         var broken = new NovelPublishReport("Broken game", "content", closure.assets, [new(PublishIssueLevel.Error, "VN-PUBLISH-CONTENT", "game", "Missing root")]);
         using (var audit = new ProjectResourceAudit(root, broken, imported))
@@ -101,7 +101,7 @@ internal static class ResourceAuditContracts
             using (var writer = new FileStream(changing, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete)) writer.WriteByte(1);
             for (int budget = 0; !audit.completed && budget < 10000; budget++) audit.Step(32);
             var changed = audit.Capture().items.Single(item => item.path.localPath == "changing.png");
-            Check(changed.hash.Length == 0 && changed.use == ResourceAuditUse.Unknown && changed.message.Contains("发生变化", StringComparison.Ordinal), "A concurrently modified source retained a trusted hash or unused classification.");
+            Check(changed.hash.Length == 0 && changed.use == ResourceAuditUse.Unknown && changed.message.Contains("changed", StringComparison.Ordinal), "A concurrently modified source retained a trusted hash or unused classification.");
         }
         using (var audit = new ProjectResourceAudit(root, closure))
         {

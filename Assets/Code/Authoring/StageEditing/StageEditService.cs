@@ -15,7 +15,7 @@ public static class StageEditService
     {
         if (stage.layers.Length >= 10000) throw new InvalidOperationException("The stage layer budget was exceeded.");
         string id = Guid.NewGuid().ToString("N");
-        stage.layers = [.. stage.layers, new() { id = id, name = "新图层", width = stage.width, height = stage.height, color = 0x24344BFF }];
+        stage.layers = [.. stage.layers, new() { id = id, name = "New layer", width = stage.width, height = stage.height, color = 0x24344BFF }];
         return id;
     }
     /// <summary>Assigns an imported image without creating a parallel resource database.</summary>

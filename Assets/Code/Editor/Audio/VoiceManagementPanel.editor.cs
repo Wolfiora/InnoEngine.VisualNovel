@@ -16,10 +16,9 @@ using Inno.VisualNovel.Editor.Localization;
 namespace Inno.VisualNovel.Editor.Audio;
 
 /// <summary>Reviews stable line matches, exports language-specific recording sheets and applies native voice batches.</summary>
-[EditorPanel("inno.vn.voices", "VN 配音管理 · Voice Manager", order: 467, menuPath: "Authoring")]
+[EditorPanel("inno.vn.voices", "VN Voice Manager", order: 467, defaultOpen: false, menuPath: "Authoring")]
 public sealed class VoiceManagementPanel : EditorPanel
 {
-    private readonly EditorTextView m_text;
     private readonly StoryDocumentsModule m_stories;
     private readonly ResourceDocumentsModule m_resources;
     private readonly EditorInteractions m_interactions;
@@ -41,28 +40,28 @@ public sealed class VoiceManagementPanel : EditorPanel
         StoryDocumentsModule stories,
         ResourceDocumentsModule resources,
         EditorInteractions interactions
-    ) { m_stories = stories; m_resources = resources; m_interactions = interactions; m_service = new(stories.codec); m_import = new(stories, resources, interactions); m_text = new(interactions); }
+    ) { m_stories = stories; m_resources = resources; m_interactions = interactions; m_service = new(stories.codec); m_import = new(stories, resources, interactions);  }
     /// <inheritdoc />
     public override Vector2 initialSize => new(1040, 780);
     /// <inheritdoc />
     protected override void OnDraw(EditorContext context)
     {
         try { Draw(context.projectDirectory); }
-        catch (Exception error) when (error is not OutOfMemoryException) { m_message = m_text.Error(error); }
+        catch (Exception error) when (error is not OutOfMemoryException) { m_message = (error).Message; }
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
     }
     private void Draw(string projectDirectory)
     {
-        EditorUiSession.current.widgets.Hint(m_text.Localize("选择游戏定义、章节和配音语言。录音文件名使用稳定台词 ID，可添加统一前缀；匹配不会模糊猜测。目标译文需要先审核，语言版本语音写入翻译表。"));
-        if (ImGui.Button(m_text.Label("使用所选游戏")))
+        EditorUiSession.current.widgets.Hint("Choose a game, chapter and voice language. Name recordings with stable dialogue IDs, optionally with a common prefix. Matching uses exact identities. Review translated lines before linking their recordings; localized voice bindings are stored in the translation table.");
+        if (ImGui.Button("Use selected game"))
         {
-            var game = NovelResourceSelection.Get<NovelProjectAsset>(m_interactions) ?? throw new InvalidOperationException(m_text.Localize("请选择 .ivnproject。"));
+            var game = NovelResourceSelection.Get<NovelProjectAsset>(m_interactions) ?? throw new InvalidOperationException("Select an .ivnproject asset.");
             m_game = m_resources.Open(game.assetPath).documentId; m_preview = null; m_locale = m_localeAsset = Guid.Empty; m_language = "";
         }
         ImGui.SameLine();
-        if (ImGui.Button(m_text.Label("使用所选章节")))
+        if (ImGui.Button("Use selected chapter"))
         {
-            var chapter = NovelResourceSelection.Get<StoryAsset>(m_interactions) ?? throw new InvalidOperationException(m_text.Localize("请选择 .ivnstory。"));
+            var chapter = NovelResourceSelection.Get<StoryAsset>(m_interactions) ?? throw new InvalidOperationException("Select an .ivnstory asset.");
             m_chapter = m_stories.Open(chapter.assetPath).documentId; m_preview = null;
         }
         if (m_game == Guid.Empty || m_chapter == Guid.Empty) return;
@@ -78,37 +77,37 @@ public sealed class VoiceManagementPanel : EditorPanel
         string sourceLanguage = project.localization?.sourceLanguage ?? project.defaultLanguage;
         if (!languages.Any(item => item.id == m_language)) { m_language = sourceLanguage; m_preview = null; }
         var widgets = EditorUiSession.current.widgets;
-        if (widgets.BeginBoundedCombo(m_text.Label("配音语言"), languages.FirstOrDefault(item => item.id == m_language)?.name ?? m_language))
+        if (widgets.BeginBoundedCombo("Voice language", languages.FirstOrDefault(item => item.id == m_language)?.name ?? m_language))
         {
             try { foreach (var language in languages) if (ImGui.Selectable(language.name + "##" + language.id, language.id == m_language)) { m_language = language.id; m_preview = null; } }
             finally { widgets.EndBoundedCombo(); }
         }
-        if (ImGui.InputText(m_text.Label("录音文件夹（Assets 内）"), ref m_folder, 4096)) m_preview = null;
-        if (ImGui.InputText(m_text.Label("文件名前缀（可空）"), ref m_prefix, 1024)) m_preview = null;
-        if (ImGui.Checkbox(m_text.Label("替换已关联的语音"), ref m_replace)) m_preview = null;
-        ImGui.Checkbox(m_text.Label("导出 TSV（否则 CSV）"), ref m_tsv);
-        if (ImGui.Button(m_text.Label("预览录音匹配")))
+        if (ImGui.InputText("Recording folder (inside Assets)", ref m_folder, 4096)) m_preview = null;
+        if (ImGui.InputText("Filename prefix (optional)", ref m_prefix, 1024)) m_preview = null;
+        if (ImGui.Checkbox("Replace existing voice bindings", ref m_replace)) m_preview = null;
+        ImGui.Checkbox("Export TSV (otherwise CSV)", ref m_tsv);
+        if (ImGui.Button("Preview recording matches"))
         { m_preview = m_service.Preview(draft, project, NativeVoiceImports.ReadFolder(projectDirectory, m_folder), m_prefix, m_replace, m_language); m_page = 0; }
         ImGui.SameLine();
-        if (ImGui.Button(m_text.Label("导出配音稿/回填清单")))
-            m_message = m_text.Localize("已导出：") + NativeVoiceImports.Export(projectDirectory, m_service.Export(draft,
+        if (ImGui.Button("Export voice script / recording manifest"))
+            m_message = "Exported: " + NativeVoiceImports.Export(projectDirectory, m_service.Export(draft,
                 m_preview ?? m_service.Preview(draft, project, [], m_prefix, m_replace, m_language), m_tsv ? '\t' : ',', project.localization), m_tsv ? '\t' : ',');
-        if (ImGui.Button(m_text.Label("保存章节、翻译与游戏")))
+        if (ImGui.Button("Save chapter, translations and game"))
         {
             if (!m_interactions.documents.Save(m_chapter) || m_locale != Guid.Empty && !m_interactions.documents.Save(m_locale)
-                || !m_interactions.documents.Save(m_game)) throw new InvalidOperationException(m_text.Localize("保存未全部完成。已成功写入的源保留，请修复引擎诊断并重试保存。"));
-            m_message = m_text.Localize("章节与游戏资源库已保存。");
+                || !m_interactions.documents.Save(m_game)) throw new InvalidOperationException("Some assets could not be saved. Successfully saved sources are retained. Resolve the engine diagnostics and save again.");
+            m_message = "Chapter and game resources saved.";
         }
         if (m_preview is null) return;
-        ImGui.Text(m_text.Localize("可关联 ") + m_preview.rows.Count(static item => item.applicable) + " / " + m_preview.rows.Count + m_text.Localize(" 条。"));
-        if (m_preview.rows.Any(static item => item.applicable) && ImGui.Button(m_text.Label("应用审核后的有效匹配")))
+        ImGui.Text("Ready to link: " + m_preview.rows.Count(static item => item.applicable) + " / " + m_preview.rows.Count + " recordings.");
+        if (m_preview.rows.Any(static item => item.applicable) && ImGui.Button("Apply reviewed valid matches"))
         {
             int count = m_import.Apply(m_chapter, m_game, m_preview); m_preview = null;
-            m_message = m_text.Localize("已关联 ") + count + m_text.Localize(" 句，章节/翻译表与游戏可一起撤销。保存相关文档后再运行；新建的音频提示源保持为独立资源。"); return;
+            m_message = "Linked: " + count + " lines. Chapter, translation and game changes can be undone together. Save the affected documents before running. Newly created audio cues remain independent assets."; return;
         }
         int pages = Math.Max(1, (m_preview.rows.Count + 49) / 50); m_page = Math.Clamp(m_page, 0, pages - 1);
-        if (ImGui.Button(m_text.Label("上一页"))) m_page = Math.Max(0, m_page - 1); ImGui.SameLine(); if (ImGui.Button(m_text.Label("下一页"))) m_page = Math.Min(pages - 1, m_page + 1);
-        ImGui.Text(m_text.Format("第 {0}/{1} 页", m_page + 1, pages));
+        if (ImGui.Button("Previous page")) m_page = Math.Max(0, m_page - 1); ImGui.SameLine(); if (ImGui.Button("Next page")) m_page = Math.Min(pages - 1, m_page + 1);
+        ImGui.Text(string.Format(System.Globalization.CultureInfo.InvariantCulture,"Page {0} of {1}", m_page + 1, pages));
         foreach (var row in m_preview.rows.Skip(m_page * 50).Take(50))
         {
             if (ImGui.Selectable(row.textId + " · " + row.speaker + " · " + row.message + "##" + row.node)) StoryNodeSelection.Select(m_interactions, m_chapter, row.node);

@@ -27,7 +27,7 @@ using Inno.VisualNovel.UI.Documents;
 namespace Inno.VisualNovel.Editor.Resources;
 
 /// <summary>Browses packaged native presets and previews them through the production presentation chain.</summary>
-[EditorPanel("inno.vn.resources", "VN 内置资源 · Built-in Resources", order: 459, menuPath: "Authoring")]
+[EditorPanel("inno.vn.resources", "VN Built-in Resources", order: 459, defaultOpen: false, menuPath: "Authoring")]
 public sealed class BuiltInResourcePanel : EditorPanel
 {
     private readonly ResourceDocumentsModule m_documents;
@@ -66,19 +66,19 @@ public sealed class BuiltInResourcePanel : EditorPanel
     protected override void OnDraw(EditorContext context)
     {
         m_fields.BeginFrame();
-        try { Draw(); } catch (Exception error) when (error is not OutOfMemoryException) { m_message = m_fields.Error(error); }
+        try { Draw(); } catch (Exception error) when (error is not OutOfMemoryException) { m_message = (error).Message; }
         finally { m_fields.EndFrame(); }
     }
     /// <inheritdoc />
     protected override void OnDetach(EditorContext context) { m_batch?.Cancel(); m_batch = null; ClearThumbnails(); m_audio.Dispose(); m_canvas.Dispose(); m_fields.Finish(); m_asset = null; m_stage = null; }
     private void Draw()
     {
-        if (ImGui.InputText(m_fields.Label("搜索名称、用途或路径"), ref m_search, 256)) m_page = 0;
-        if (m_fields.Select("resources/kind", m_fields.Localize("分类"), ref m_filter, new[] { (string.Empty, m_fields.Localize("全部内置资源")) }
-            .Concat(Enum.GetValues<BuiltInResourceKind>().Select(kind => (kind.ToString(), m_fields.Localize(Label(kind))))))) m_page = 0;
+        if (ImGui.InputText("Search name, usage or path", ref m_search, 256)) m_page = 0;
+        if (m_fields.Select("resources/kind", "Category", ref m_filter, new[] { (string.Empty, "All built-in resources") }
+            .Concat(Enum.GetValues<BuiltInResourceKind>().Select(kind => (kind.ToString(), Label(kind)))))) m_page = 0;
         var entries = BuiltInResourceCatalog.entries.Where(entry => (m_filter.Length == 0 || entry.kind.ToString() == m_filter)
             && (entry.name.Contains(m_search, StringComparison.OrdinalIgnoreCase) || entry.path.Contains(m_search, StringComparison.OrdinalIgnoreCase) || entry.usage.Contains(m_search, StringComparison.OrdinalIgnoreCase)
-                || m_fields.Localize(entry.name).Contains(m_search, StringComparison.OrdinalIgnoreCase) || m_fields.Localize(entry.usage).Contains(m_search, StringComparison.OrdinalIgnoreCase))).ToArray();
+                || entry.name.Contains(m_search, StringComparison.OrdinalIgnoreCase) || entry.usage.Contains(m_search, StringComparison.OrdinalIgnoreCase))).ToArray();
         if (m_selected.Length == 0 && entries.Length > 0) Select(entries[0]);
         m_page = Math.Clamp(m_page, 0, Math.Max(0, (entries.Length - 1) / 12));
         var visible = entries.Skip(m_page * 12).Take(12).ToArray();
@@ -86,28 +86,28 @@ public sealed class BuiltInResourcePanel : EditorPanel
         foreach (string key in m_thumbnails.Keys.Where(key => !retained.Contains(key)).ToArray()) { m_thumbnails[key].Dispose(); m_thumbnails.Remove(key); }
         Child("builtin-list", new(300, 0), () =>
         {
-            ImGui.Text(m_fields.Format("{0} 项 · 第 {1} 页", entries.Length, m_page + 1));
-            ImGui.Text(m_fields.Localize("批量选择 · ") + m_batchSelection.Count + m_fields.Localize(" 项（跨页保留）"));
-            if (ImGui.SmallButton(m_fields.Label("选择筛选内可编辑资源"))) foreach (var entry in entries.Where(static entry => entry.kind != BuiltInResourceKind.Icon)) m_batchSelection.Add(entry.path);
-            if (m_batchSelection.Count > 0 && ImGui.SmallButton(m_fields.Label("清空批量选择"))) m_batchSelection.Clear();
-            if (m_batch?.running != true && m_batchSelection.Count > 0 && ImGui.Button(m_fields.Label("批量创建可编辑副本")))
+            ImGui.Text(string.Format(System.Globalization.CultureInfo.InvariantCulture,"{0} items · Page {1}", entries.Length, m_page + 1));
+            ImGui.Text("Batch selection · " + m_batchSelection.Count + " items (retained across pages)");
+            if (ImGui.SmallButton("Select editable resources in this filter")) foreach (var entry in entries.Where(static entry => entry.kind != BuiltInResourceKind.Icon)) m_batchSelection.Add(entry.path);
+            if (m_batchSelection.Count > 0 && ImGui.SmallButton("Clear batch selection")) m_batchSelection.Clear();
+            if (m_batch?.running != true && m_batchSelection.Count > 0 && ImGui.Button("Create editable copies in bulk"))
             {
                 m_fields.Finish(); m_batch = new(BuiltInResourceCatalog.entries.Where(entry => m_batchSelection.Contains(entry.path)).Select(BuiltInResourceLoader.Load)); m_batchPage = 0;
             }
-            if (ImGui.SmallButton(m_fields.Label("刷新缩略图"))) ClearThumbnails();
+            if (ImGui.SmallButton("Refresh thumbnails")) ClearThumbnails();
             if (ImGui.BeginTable("builtin-thumbnails", 2, ImGuiTableFlags.SizingStretchProp))
             {
                 try
                 {
-                    ImGui.TableSetupColumn(m_fields.Localize("预览"), ImGuiTableColumnFlags.WidthStretch, 1);
-                    ImGui.TableSetupColumn(m_fields.Localize("资源"), ImGuiTableColumnFlags.WidthStretch, 2);
+                    ImGui.TableSetupColumn("Preview", ImGuiTableColumnFlags.WidthStretch, 1);
+                    ImGui.TableSetupColumn("Resource", ImGuiTableColumnFlags.WidthStretch, 2);
                     foreach (var entry in visible)
                     {
                         ImGui.TableNextColumn();
                         if (entry.kind != BuiltInResourceKind.Icon)
                         {
                             bool selected = m_batchSelection.Contains(entry.path);
-                            if (ImGui.Checkbox(m_fields.Caption("批量##" + entry.path, m_fields.Localize("批量##") + entry.path), ref selected)) { if (selected) m_batchSelection.Add(entry.path); else m_batchSelection.Remove(entry.path); }
+                            if (ImGui.Checkbox("Batch##" + entry.path, ref selected)) { if (selected) m_batchSelection.Add(entry.path); else m_batchSelection.Remove(entry.path); }
                         }
                         if (!m_thumbnails.TryGetValue(entry.path, out var thumbnail)) m_thumbnails.Add(entry.path, thumbnail = new(entry, m_previews));
                         Vector2 position = ImGui.GetCursorScreenPosition(), mouse = ImGui.GetMousePos();
@@ -116,35 +116,34 @@ public sealed class BuiltInResourcePanel : EditorPanel
                         if (ImGui.IsWindowHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && mouse.X >= position.X && mouse.Y >= position.Y
                             && mouse.X < position.X + size.X && mouse.Y < position.Y + size.Y) Select(entry);
                         ImGui.TableNextColumn();
-                        if (ImGui.Selectable(m_fields.Caption(Label(entry.kind) + " · " + entry.name + "##" + entry.path,
-                            m_fields.Localize(Label(entry.kind)) + " · " + m_fields.Localize(entry.name) + "##" + entry.path), entry.path == m_selected)) Select(entry);
-                        if (thumbnail.error.Length > 0 && entry.path == m_selected) EditorUiSession.current.widgets.Hint(m_fields.Localize("缩略图不可用：") + thumbnail.error);
+                        if (ImGui.Selectable(entry.kind + " · " + entry.name + "##" + entry.path, entry.path == m_selected)) Select(entry);
+                        if (thumbnail.error.Length > 0 && entry.path == m_selected) EditorUiSession.current.widgets.Hint("Thumbnail unavailable: " + thumbnail.error);
                     }
                 }
                 finally { ImGui.EndTable(); }
             }
-            if (m_page > 0 && ImGui.Button(m_fields.Label("上一页"))) m_page--;
-            if ((m_page + 1) * 12 < entries.Length && ImGui.Button(m_fields.Label("下一页"))) m_page++;
+            if (m_page > 0 && ImGui.Button("Previous page")) m_page--;
+            if ((m_page + 1) * 12 < entries.Length && ImGui.Button("Next page")) m_page++;
         });
         ImGui.SameLine(); Child("builtin-preview", new(0, 0), () => { Batch(); Details(); });
     }
     private void Batch()
     {
         if (m_batch is not { } batch) return;
-        ImGui.SeparatorText(m_fields.Localize("项目副本批次 · ") + batch.completed + "/" + batch.total);
+        ImGui.SeparatorText("Project copy batch · " + batch.completed + "/" + batch.total);
         if (batch.running)
         {
-            if (ImGui.Button(m_fields.Label("停止批量复制"))) batch.Cancel();
+            if (ImGui.Button("Stop batch copy")) batch.Cancel();
             else batch.Advance();
         }
-        EditorUiSession.current.widgets.Hint(batch.running ? m_fields.Localize("每次编辑器更新复制一个资源。一个主题连同它的页面作为一项；原生导入不可中途抢占。")
-            : batch.error.Length > 0 ? m_fields.Localize("批次已停止：") + (batch.failure is { } cause ? m_fields.Error(cause) : batch.error) : batch.cancelled ? m_fields.Localize("已停止。以下已创建资源保留在项目中。") : m_fields.Localize("批量复制完成。以下均为独立项目资产。"));
+        EditorUiSession.current.widgets.Hint(batch.running ? "Copies one resource per editor update. A theme and its screens count as one item. A native import cannot be interrupted midway."
+            : batch.error.Length > 0 ? "Batch stopped: " + (batch.failure is { } cause ? (cause).Message : batch.error) : batch.cancelled ? "Stopped. The created assets below remain in the project." : "Batch copy complete. These are independent project assets.");
         int pages = Math.Max(1, (batch.created.Count + 9) / 10); m_batchPage = Math.Clamp(m_batchPage, 0, pages - 1);
         foreach (var output in batch.created.Skip(m_batchPage * 10).Take(10))
             if (ImGui.Selectable(output.path + "##batch-output/" + output.assetId))
             { var asset = Assets.Load<AssetObject>(output.assetId); m_interactions.SetSelection(asset); m_documents.Open(asset.assetPath); }
-        if (m_batchPage > 0 && ImGui.SmallButton(m_fields.Label("上一页副本"))) m_batchPage--;
-        if (m_batchPage + 1 < pages && ImGui.SmallButton(m_fields.Label("下一页副本"))) m_batchPage++;
+        if (m_batchPage > 0 && ImGui.SmallButton("Previous output page")) m_batchPage--;
+        if (m_batchPage + 1 < pages && ImGui.SmallButton("Next output page")) m_batchPage++;
     }
     private void Select(BuiltInResourceEntry entry)
     {
@@ -158,14 +157,14 @@ public sealed class BuiltInResourcePanel : EditorPanel
     private void Details()
     {
         var entry = BuiltInResourceCatalog.entries.SingleOrDefault(entry => entry.path == m_selected); if (entry is null || m_asset is null) return;
-        ImGui.Text(m_fields.Localize(entry.name)); EditorUiSession.current.widgets.Hint(m_fields.Localize(entry.usage)); ImGui.Text(m_asset.assetPath.ToString());
+        ImGui.Text(entry.name); EditorUiSession.current.widgets.Hint(entry.usage); ImGui.Text(m_asset.assetPath.ToString());
         if (m_asset is VisualEffectAsset effect) EditorUiSession.current.widgets.Hint(effect.description);
-        EditorUiSession.current.widgets.Hint(m_fields.Localize("原创资源：Apache License 2.0；保留许可与版权说明。安装资源只读，参数修改先创建项目副本。"));
-        if (ImGui.Button(m_fields.Label("选择此资源供其他面板使用"))) m_interactions.SetSelection(m_asset);
-        if (m_asset is not TextureAsset && ImGui.Button(m_fields.Label("创建可编辑项目副本")))
+        EditorUiSession.current.widgets.Hint("Original resources: Apache License 2.0. Retain the license and copyright notices. Installed resources are read-only; create a project copy before editing parameters.");
+        if (ImGui.Button("Select this resource for other panels")) m_interactions.SetSelection(m_asset);
+        if (m_asset is not TextureAsset && ImGui.Button("Create editable project copy"))
         {
             m_fields.Finish(); AssetObject copy = BuiltInResourceCopyService.Copy(m_asset); m_interactions.SetSelection(copy); m_documents.Open(copy.assetPath);
-            m_message = m_fields.Localize("已创建独立副本：") + copy.assetPath + m_fields.Localize("。在对应设计器继续编辑；游戏设置可关联这个资源。");
+            m_message = "Created independent copy: " + copy.assetPath + ". Continue in the corresponding designer, or link this resource in game settings.";
         }
         if (m_asset is AudioCueAsset cue) { ImGui.Text(cue.author + " · " + cue.clip?.duration); m_audio.Draw(cue); }
         else Preview();
@@ -176,16 +175,16 @@ public sealed class BuiltInResourcePanel : EditorPanel
         float width = Math.Max(1, ImGui.GetContentRegionAvailable().X);
         if (m_stage is not null)
         {
-            if (ImGui.Button(m_fields.Caption(m_playing ? "暂停演出" : "播放演出", m_playing ? m_fields.Localize("暂停演出") : m_fields.Localize("播放演出")))) m_playing = !m_playing;
-            ImGui.SameLine(); if (ImGui.Button(m_fields.Label("从头预览"))) m_time = 0;
-            m_fields.Toggle("resources/reduced", "检查减少动态效果", ref m_reducedMotion);
+            if (ImGui.Button(m_playing ? "Pause presentation" : "Play presentation")) m_playing = !m_playing;
+            ImGui.SameLine(); if (ImGui.Button("Preview from start")) m_time = 0;
+            m_fields.Toggle("resources/reduced", "Preview reduced motion", ref m_reducedMotion);
             if (m_playing) m_time = (m_time + Math.Clamp(ImGui.GetInput().deltaTime, 0, .25)) % Math.Max(.001, m_stage.duration);
-            m_fields.Number("resources/time", m_fields.Localize("逻辑时间（秒）"), ref m_time, 0, 86400);
+            m_fields.Number("resources/time", "Logical time (seconds)", ref m_time, 0, 86400);
             m_canvas.Draw(new(1920, 1080, []), new(width, width * 1080 / 1920), m_stage.Evaluate(m_time, m_reducedMotion));
         }
         else if (m_asset is ThemeAsset theme)
         {
-            m_fields.Select("resources/theme-role", m_fields.Localize("预览页面"), ref m_role, theme.screens.Select(static binding => (binding.role, binding.role)));
+            m_fields.Select("resources/theme-role", "Preview screen", ref m_role, theme.screens.Select(static binding => (binding.role, binding.role)));
             var screen = theme.screens.SingleOrDefault(binding => binding.role == m_role)?.screen ?? theme.screens.FirstOrDefault()?.screen;
             if (screen is null) return;
             var page = new UiDocumentInstance(screen, NovelPresentationFrame.Measure, NovelPresentationFrame.MeasureRichText, theme);
@@ -205,7 +204,7 @@ public sealed class BuiltInResourcePanel : EditorPanel
         }
     }
     private static string Label(BuiltInResourceKind kind) => kind switch
-    { BuiltInResourceKind.Widget => "组件", BuiltInResourceKind.Theme => "主题", BuiltInResourceKind.Stage => "背景", BuiltInResourceKind.Character => "角色", BuiltInResourceKind.Motion => "动作", BuiltInResourceKind.Particle => "粒子", BuiltInResourceKind.Transition => "转场", BuiltInResourceKind.ScreenEffect => "屏幕效果", BuiltInResourceKind.Audio => "音频", BuiltInResourceKind.Icon => "图标", _ => throw new ArgumentOutOfRangeException(nameof(kind)) };
+    { BuiltInResourceKind.Widget => "Widget", BuiltInResourceKind.Theme => "Theme", BuiltInResourceKind.Stage => "Background", BuiltInResourceKind.Character => "Character", BuiltInResourceKind.Motion => "Motion", BuiltInResourceKind.Particle => "Particles", BuiltInResourceKind.Transition => "Transition", BuiltInResourceKind.ScreenEffect => "Screen effect", BuiltInResourceKind.Audio => "Audio", BuiltInResourceKind.Icon => "Icons", _ => throw new ArgumentOutOfRangeException(nameof(kind)) };
     private static void Child(
         string id,
         Vector2 size,

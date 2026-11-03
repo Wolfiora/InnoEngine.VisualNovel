@@ -10,7 +10,7 @@ using Inno.VisualNovel.Editor.Localization;
 
 namespace Inno.VisualNovel.Editor.ScriptEditor;
 
-internal sealed class ScriptCardDragView(EditorTextView text)
+internal sealed class ScriptCardDragView()
 {
     private const string m_payloadType = "INNO_VN_SCRIPT_CARD";
     private Guid m_owner = Guid.NewGuid();
@@ -43,10 +43,10 @@ internal sealed class ScriptCardDragView(EditorTextView text)
             var edge = reorder.DropConnection(draft, new(rows[payload.row].nodeId), new(rows[rowIndex].nodeId), after);
             float y = after ? maximum.Y : minimum.Y;
             ImGui.GetDrawList().Line(new(minimum.X, y), new(maximum.X, y), ImGui.ToPackedColor(new(.5f, .8f, 1, 1)), 2);
-            widgets.Hint(text.Localize("松开后按实际连线移动；跨分支或片段时先审阅连接变化。"));
+            widgets.Hint("Release to move along the actual connections. Review changes before crossing branches or fragments.");
             return delivered ? (rows[payload.row].nodeId, edge) : null;
         }
-        catch (InvalidOperationException error) { if (preview) widgets.Hint(text.Error(error)); return null; }
+        catch (InvalidOperationException error) { if (preview) widgets.Hint((error).Message); return null; }
     }
 
     internal (string node, GraphEdgeId destination)? DrawConnection(
@@ -61,7 +61,7 @@ internal sealed class ScriptCardDragView(EditorTextView text)
         string source = rows[payload.row].nodeId;
         if (edge.input.nodeId.value == source || edge.output.nodeId.value == source) return null;
         ImGui.GetDrawList().Rectangle(ImGui.GetItemMinimum(), ImGui.GetItemMaximum(), ImGui.ToPackedColor(new(.5f, .8f, 1, 1)), 0, 2);
-        widgets.Hint(text.Localize("将此指令插入这条执行连线；复杂控制流先审阅变化。"));
+        widgets.Hint("Insert this instruction on this execution connection. Review changes for complex control flow.");
         return delivered ? (source, edge.id) : null;
     }
 

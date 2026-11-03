@@ -63,29 +63,29 @@ public sealed class ResourceAuditReport
     /// <returns>A Chinese Markdown report.</returns>
     public string ToMarkdown()
     {
-        var text = new StringBuilder("# VN 资源审计\n\n");
-        text.Append("游戏：").Append(Cell(title)).Append("\n\n构建指纹：").Append(Cell(fingerprint)).Append("\n\n");
-        text.Append(inventoryComplete ? "项目源枚举完成。" : "报告不完整：仍在扫描、已取消或存在读取/上限错误。");
-        text.Append(closureComplete ? " 原生内容闭包可用。" : " 原生内容闭包不完整，不能推断未引用。");
-        text.Append("\n\n范围为当前项目 Assets 下已知 VN/PNG/JPEG/WAV/TTF/OTF 源及原生闭包中的其他格式；跳过 ~、隐藏和重解析子树。未引用仅相对于选定游戏，不证明其他场景、游戏或动态脚本不需要该资源。本工具不删除文件。\n\n");
-        text.Append("源文件字节不等于 Player 包体积；字节相同也不证明资产身份或用法可互换。许可内容由作者填写，审计不验证法律授权或最终分发是否携带全部要求的文件。\n\n");
+        var text = new StringBuilder("# VN resource audit\n\n");
+        text.Append("Game: ").Append(Cell(title)).Append("\n\nBuild fingerprint: ").Append(Cell(fingerprint)).Append("\n\n");
+        text.Append(inventoryComplete ? "Project source enumeration completed." : "Incomplete report: scanning, cancelled, or a read or budget error occurred.");
+        text.Append(closureComplete ? " The native content closure is available." : " The native content closure is incomplete; unused status cannot be inferred.");
+        text.Append("\n\nScope: known VN/PNG/JPEG/WAV/TTF/OTF sources in this project's Assets and other formats in the native closure. Sample, hidden and reparse subtrees are excluded. Unused means unreferenced by the selected game; other scenes, games or dynamic scripts may still need the resource. This tool does not delete files.\n\n");
+        text.Append("Source bytes are not Player package size. Equal bytes do not make asset identities or uses interchangeable. License records are author-provided; this audit does not verify permissions or the contents of the final distribution.\n\n");
         foreach (var issue in issues) text.Append("- [").Append(issue.level).Append("] ").Append(Cell(issue.code)).Append(" · ").Append(Cell(issue.location)).Append("：").Append(Cell(issue.message)).Append('\n');
-        text.Append("\n| 资源源文件 | 原生身份 | 源字节 | 引用状态 | 直接引用者 | 信息 |\n|---|---|---:|---|---|---|\n");
+        text.Append("\n| Resource source | Native identity | Source bytes | Reference status | Direct referrers | Information |\n|---|---|---:|---|---|---|\n");
         foreach (var item in items) text.Append("| ").Append(Cell(item.path.ToString())).Append(" | ").Append(item.id).Append(" | ").Append(item.bytes).Append(" | ").Append(ResourceInventoryRules.DescribeUse(item.use))
             .Append(" | ").Append(Cell(string.Join("；", item.referrers))).Append(" | ").Append(Cell(item.message)).Append(" |\n");
-        text.Append("\n## 源文件字节重复\n\n");
+        text.Append("\n## Duplicate source bytes\n\n");
         foreach (var group in duplicateGroups)
         {
-            text.Append("- SHA-256 ").Append(group[0].hash).Append(" · 每项 ").Append(group[0].bytes).Append(" 字节\n");
+            text.Append("- SHA-256 ").Append(group[0].hash).Append(" · Per item: ").Append(group[0].bytes).Append(" bytes\n");
             foreach (var item in group) text.Append("  - ").Append(Cell(item.path.ToString())).Append('\n');
         }
-        text.Append("\n## 插件只读引用\n\n这些引用不进入项目源清理候选。按插件随附许可核对游戏分发要求，不能把“插件已安装”当作最终署名已完成。\n\n");
+        text.Append("\n## Read-only plugin references\n\nThese references are excluded from project cleanup candidates. Check game distribution requirements against the included licenses; installing a plugin does not fulfill attribution requirements.\n\n");
         foreach (var item in external) text.Append("- ").Append(Cell(item.path.ToString())).Append(" · ").Append(item.id).Append('\n');
-        text.Append("\n## 已记录的分发信息\n\n");
+        text.Append("\n## Recorded distribution information\n\n");
         foreach (var item in licenses)
         {
-            text.Append("- ").Append(item.assetId).Append(" · ").Append(Cell(item.author)).Append(" · ").Append(Cell(item.license)).Append(" · 来源：").Append(Cell(item.source))
-                .Append(" · 已确认分发：").Append(item.redistributionConfirmed ? "是" : "否").Append(" · 修改：").Append(Cell(item.modifications)).Append('\n');
+            text.Append("- ").Append(item.assetId).Append(" · ").Append(Cell(item.author)).Append(" · ").Append(Cell(item.license)).Append(" · Source: ").Append(Cell(item.source))
+                .Append(" · Redistribution confirmed: ").Append(item.redistributionConfirmed ? "Yes" : "No").Append(" · Modifications: ").Append(Cell(item.modifications)).Append('\n');
         }
         return text.ToString();
     }

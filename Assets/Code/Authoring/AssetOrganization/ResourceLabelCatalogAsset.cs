@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Authoring.AssetOrganization;
 public sealed class ResourceLabelCatalogAsset : AssetObject
 {
     /// <summary>Gets or sets the creator-facing title of this editor-owned annotation document.</summary>
-    [SerializableProperty] public string title { get; set; } = "资源整理";
+    [SerializableProperty] public string title { get; set; } = "Resource annotations";
     /// <summary>Gets or sets annotations for explicitly chosen native resources, with one record per persistent identity.</summary>
     [SerializableProperty] public ResourceLabelEntry[] entries { get; set; } = [];
 }

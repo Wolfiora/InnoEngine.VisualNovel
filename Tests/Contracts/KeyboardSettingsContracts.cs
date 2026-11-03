@@ -102,6 +102,12 @@ internal static class KeyboardSettingsContracts
             "Formal text/navigation mapping lost modifier ownership, AltGr safety, canvas propagation or backward Tab navigation.");
         using (var view = new NovelGameView(game, session, Measure))
         {
+            string firstNode = session.story!.nodeId;
+            view.HandleInput(Map(KeyCode.Space));
+            Check(session.story.isTextComplete && session.page == "reading", "Ordinary Space activated the default reading toolbar instead of revealing dialogue.");
+            view.HandleInput(Map(KeyCode.Enter));
+            Check(session.story.nodeId != firstNode && session.page == "reading", "Ordinary Enter activated the default reading toolbar instead of advancing dialogue.");
+            session.StartNew();
             view.HandleInput(Map(KeyCode.Q)); Check(session.automatic && !session.story!.isTextComplete, "A mapped reading shortcut also advanced the dialogue.");
             view.HandleInput(new() { readingShortcut = "automatic", composing = true }); Check(session.automatic, "Composition triggered a mapped action.");
             Focus(view, "pause");

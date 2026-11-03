@@ -41,7 +41,7 @@ public static class ResourceLabelEditService
         var known = catalog.entries.Select(static entry => entry.asset!.identity.persistentId).ToHashSet();
         if (ids.Length is < 1 or > 10000 || selected.Count != ids.Length || selected.Contains(Guid.Empty)
             || !selected.IsSubsetOf(known))
-            throw new AuthoringValidationException($"批量整理需要 1～10000 个不同且仍存在的资源记录。");
+            throw new AuthoringValidationException($"A batch requires 1–10000 distinct resource records that still exist.");
         string[] add = NormalizeTags(change.addTags); var remove = NormalizeTags(change.removeTags).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var entries = catalog.entries.Select(entry =>
         {
@@ -79,20 +79,20 @@ public static class ResourceLabelEditService
         Guid assetId
     ) {
         Validate(catalog);
-        if (!catalog.entries.Any(entry => entry.asset!.identity.persistentId == assetId)) throw new AuthoringValidationException($"资源整理记录已经移除，请刷新列表。");
+        if (!catalog.entries.Any(entry => entry.asset!.identity.persistentId == assetId)) throw new AuthoringValidationException($"The resource annotation was removed. Refresh the list.");
         catalog.entries = catalog.entries.Where(entry => entry.asset!.identity.persistentId != assetId).Select(static entry => entry.Copy()).ToArray();
     }
     private static ResourceLabelEntry Normalize(ResourceLabelEntry entry)
     {
-        if (entry.group is null || entry.description is null) throw new AuthoringValidationException($"分类和说明需要有效文字；清空时请使用空字符串。");
+        if (entry.group is null || entry.description is null) throw new AuthoringValidationException($"Categories and descriptions require valid text. Use an empty string to clear them.");
         return new() { asset = entry.asset, group = entry.group.Trim(), tags = NormalizeTags(entry.tags), description = entry.description };
     }
     private static string[] NormalizeTags(string[] tags)
     {
-        if (tags is null || tags.Length > 128 || tags.Any(static tag => tag is null)) throw new AuthoringValidationException($"每批标签输入最多 128 项，标签不能为 null。");
+        if (tags is null || tags.Length > 128 || tags.Any(static tag => tag is null)) throw new AuthoringValidationException($"Tag input is limited to 128 entries per batch; tags cannot be null.");
         var values = tags.Select(static tag => tag.Trim()).Where(static tag => tag.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (values.Length > 32 || values.Any(static tag => tag.Length > 64 || tag.Any(char.IsControl)))
-            throw new AuthoringValidationException($"每条资源最多 32 个标签；每个标签最多 64 个字符且不能包含控制字符。");
+            throw new AuthoringValidationException($"Each resource supports up to 32 tags. Each tag is limited to 64 characters without control characters.");
         return values;
     }
     private static void ValidateEntries(
@@ -100,16 +100,16 @@ public static class ResourceLabelEditService
         ResourceLabelEntry[] entries
     ) {
         if (string.IsNullOrWhiteSpace(title) || title.Length > 256 || entries is null || entries.Length > 10000)
-            throw new AuthoringValidationException($"资源整理需要 1～256 字符的标题，每份目录最多 10000 条记录。");
+            throw new AuthoringValidationException($"Resource annotations require a 1–256 character title and at most 10000 records per document.");
         var ids = new HashSet<Guid>();
         foreach (var entry in entries)
         {
             if (entry?.asset is null || entry.asset is ResourceLabelCatalogAsset || entry.asset.identity.persistentId == Guid.Empty || !ids.Add(entry.asset.identity.persistentId))
-                throw new AuthoringValidationException($"整理记录需要唯一的原生资源身份；不能记录整理目录自身。");
+                throw new AuthoringValidationException($"Annotations require unique native resource identities and cannot reference annotation catalogs.");
             var normalized = Normalize(entry);
             if (entry.group.Length > 128 || entry.group.Any(char.IsControl) || entry.description.Length > 4096
                 || entry.group != normalized.group || !entry.tags.SequenceEqual(normalized.tags, StringComparer.Ordinal))
-                throw new AuthoringValidationException($"分类最多 128 字符、说明最多 4096 字符；源标签需要去重并去除首尾空白。");
+                throw new AuthoringValidationException($"Categories are limited to 128 characters and descriptions to 4096. Source tags must be unique and trimmed.");
         }
     }
 }

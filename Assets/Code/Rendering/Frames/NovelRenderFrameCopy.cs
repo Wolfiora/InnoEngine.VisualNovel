@@ -14,7 +14,15 @@ public static class NovelRenderFrameCopy
     {
         var copies = new Dictionary<NovelImagePlan, NovelImagePlan>(ReferenceEqualityComparer.Instance); int nodes = 0, paints = 0;
         var active = new HashSet<NovelImagePlan>(ReferenceEqualityComparer.Instance);
-        return frame with { quads = Quads(frame.quads), image = frame.image is null ? null : Image(frame.image, 0) };
+        int vertices = 0;
+        return frame with { quads = Quads(frame.quads), uiMeshes = Meshes(frame.uiMeshes), image = frame.image is null ? null : Image(frame.image, 0) };
+        IReadOnlyList<NovelDrawMesh> Meshes(IReadOnlyList<NovelDrawMesh> source)
+        {
+            paints = checked(paints + source.Count);
+            foreach (var mesh in source) vertices = checked(vertices + mesh.vertexCount);
+            if (paints > 100000 || vertices > 6000000) throw new InvalidOperationException("Capture exceeds its mesh budget.");
+            return Array.AsReadOnly(source.ToArray());
+        }
         IReadOnlyList<NovelDrawQuad> Quads(IReadOnlyList<NovelDrawQuad> source)
         {
             paints = checked(paints + source.Count); if (paints > 100000) throw new InvalidOperationException("Capture exceeds its paint budget.");
@@ -27,6 +35,7 @@ public static class NovelRenderFrameCopy
             NovelImagePlan copy = source switch
             {
                 NovelPaintImage paint => new NovelPaintImage(Quads(paint.quads)),
+                NovelMeshImage mesh => new NovelMeshImage(Meshes(mesh.meshes)),
                 NovelStackImage stack => new NovelStackImage(Array.AsReadOnly(stack.layers.Select(item => Image(item, depth + 1)).ToArray())),
                 NovelProcessImage process => process with { source = Image(process.source, depth + 1), previous = Image(process.previous, depth + 1) },
                 _ => throw new InvalidOperationException("Capture contains an unsupported image operation.")

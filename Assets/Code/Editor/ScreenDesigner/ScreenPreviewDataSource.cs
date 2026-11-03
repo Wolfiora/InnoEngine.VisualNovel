@@ -18,9 +18,9 @@ internal sealed class ScreenPreviewDataSource : UiDataSource
     }
     private readonly Dictionary<string, NovelValue> m_values = new()
     {
-        ["game.title"] = NovelValue.String("页面设计预览"), ["game.active"] = NovelValue.Boolean(true),
-        ["stage.empty"] = NovelValue.Boolean(true), ["dialogue.speaker"] = NovelValue.String("角色姓名"),
-        ["dialogue.text"] = NovelValue.String("这是使用正式游戏 UI 与文字渲染器的预览。\n切换布局与字号，检查长台词和控件位置。"),
+        ["game.title"] = NovelValue.String("Screen design preview"), ["game.active"] = NovelValue.Boolean(true),
+        ["stage.empty"] = NovelValue.Boolean(true), ["dialogue.speaker"] = NovelValue.String("Character name"),
+        ["dialogue.text"] = NovelValue.String("This preview uses the production game UI and text renderer.\nSwitch layouts and font sizes to check long lines and control placement."),
         ["dialogue.visible"] = NovelValue.Boolean(true), ["dialogue.adv"] = NovelValue.Boolean(true), ["reading.toolbarVisible"] = NovelValue.Boolean(true), ["choice.visible"] = NovelValue.Boolean(true),
         ["game.theme"] = NovelValue.String("builtin.theme.clear"),
         ["choice.timed"] = NovelValue.Boolean(true), ["choice.timeRemaining"] = NovelValue.Number(6.5),
@@ -51,8 +51,8 @@ internal sealed class ScreenPreviewDataSource : UiDataSource
     ) => path == "item.shortcutKey" ? m_keyboard.TryWrite(path, value, row) : base.TryWrite(path, value, row);
     public override IReadOnlyList<UiDataRow> ReadRows(string path) => path is "settings.shortcuts" or "settings.shortcutKeys" or "settings.holdSkipChoices" or "settings.navigationShortcuts" or "settings.navigationKeys"
         ? m_keyboard.ReadRows(path) : path == "languages" ? [
-        new("zh-CN", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("简体中文"), ["value"] = NovelValue.String("zh-CN") }),
+        new("zh-CN", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("Simplified Chinese"), ["value"] = NovelValue.String("zh-CN") }),
         new("en", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("English"), ["value"] = NovelValue.String("en") })] : path == "choices" ? [
-        new("one", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("第一个示例选项"), ["id"] = NovelValue.String("one"), ["enabled"] = NovelValue.Boolean(true) }),
-        new("two", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("用于检查文本扩张和布局的较长选项"), ["id"] = NovelValue.String("two"), ["enabled"] = NovelValue.Boolean(true) })] : [];
+        new("one", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("First example choice"), ["id"] = NovelValue.String("one"), ["enabled"] = NovelValue.Boolean(true) }),
+        new("two", new Dictionary<string, NovelValue> { ["text"] = NovelValue.String("A longer choice for checking text expansion and layout"), ["id"] = NovelValue.String("two"), ["enabled"] = NovelValue.Boolean(true) })] : [];
 }

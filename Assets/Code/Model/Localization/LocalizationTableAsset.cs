@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Model.Localization;
 public sealed class LocalizationTableAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing table title.</summary>
-    [SerializableProperty] public string title { get; set; } = "游戏文本";
+    [SerializableProperty] public string title { get; set; } = "Game text";
     /// <summary>Gets or sets the source language tag.</summary>
     [SerializableProperty] public string sourceLanguage { get; set; } = "zh-CN";
     /// <summary>Gets or sets available game languages in UI order.</summary>

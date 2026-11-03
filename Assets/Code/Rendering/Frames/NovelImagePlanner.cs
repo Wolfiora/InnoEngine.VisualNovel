@@ -21,19 +21,23 @@ internal sealed class NovelImagePlanner(
         UiFrame ui,
         UiFrame? previousUi,
         float width,
-        float height
+        float height,
+        IReadOnlyList<NovelDrawMesh>? nativeUi,
+        IReadOnlyList<NovelDrawMesh>? previousNativeUi
     ) {
-        NovelImagePlan current = Scene(stage, ui);
+        NovelImagePlan current = Scene(stage, ui, nativeUi);
         if (stage.transition is { scope: TransitionScope.Output } output)
-            current = Transition(current, Scene(output.before, previousUi ?? throw new InvalidOperationException("Output transition has no frozen previous UI.")), output);
+            current = Transition(current, Scene(output.before, previousUi ?? (previousNativeUi is not null ? new UiFrame(width, height, [])
+                : throw new InvalidOperationException("Output transition has no frozen previous UI.")), previousNativeUi), output);
         return current;
 
-        NovelImagePlan Scene(StageFrame frame, UiFrame page)
+        NovelImagePlan Scene(StageFrame frame, UiFrame page, IReadOnlyList<NovelDrawMesh>? meshes)
         {
             NovelImagePlan scenery = Stage(frame, page);
             if (frame.transition is { scope: TransitionScope.Stage } whole)
                 scenery = Transition(scenery, Stage(whole.before, page), whole);
-            var image = new NovelStackImage([scenery, new NovelPaintImage(paintUi(page, width, height, false))]);
+            NovelImagePlan image = new NovelStackImage([scenery, new NovelPaintImage(paintUi(page, width, height, false))]);
+            if (meshes is { Count: > 0 }) image = new NovelStackImage([image, new NovelMeshImage(Array.AsReadOnly(meshes.ToArray()))]);
             return Effects(image, frame, true);
         }
         NovelImagePlan Stage(StageFrame frame, UiFrame page)

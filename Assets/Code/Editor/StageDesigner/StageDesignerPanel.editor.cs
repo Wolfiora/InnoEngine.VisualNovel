@@ -17,7 +17,7 @@ using Inno.VisualNovel.UI.Documents;
 namespace Inno.VisualNovel.Editor.StageDesigner;
 
 /// <summary>Edits native scenery layers and previews the production stage composition.</summary>
-[EditorPanel("inno.vn.stage-designer", "VN 舞台设计 · Stage Designer", order: 452, menuPath: "Authoring")]
+[EditorPanel("inno.vn.stage-designer", "VN Stage Designer", order: 452, defaultOpen: false, menuPath: "Authoring")]
 public sealed class StageDesignerPanel : EditorPanel, IEditorPanelReloadState
 {
     private readonly ResourceDocumentsModule m_documents;
@@ -51,7 +51,7 @@ public sealed class StageDesignerPanel : EditorPanel, IEditorPanelReloadState
     {
         m_fields.BeginFrame(); m_canvasDrawn = false;
         try { Draw(); }
-        catch (Exception error) when (error is not OutOfMemoryException) { m_message = m_fields.Error(error); }
+        catch (Exception error) when (error is not OutOfMemoryException) { m_message = (error).Message; }
         finally { if (!m_canvasDrawn) m_canvas.Finish(); m_fields.EndFrame(); }
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
     }
@@ -64,17 +64,17 @@ public sealed class StageDesignerPanel : EditorPanel, IEditorPanelReloadState
     private void Finish() { m_canvas.Finish(); m_fields.Finish(); }
     private void Draw()
     {
-        if (!m_toolbar.Draw("舞台", ".ivnstage", static () => new StageAsset { resourceId = "stage-" + Guid.NewGuid().ToString("N") }, out StageAsset? stage) || stage is null) return;
+        if (!m_toolbar.Draw("Stage", ".ivnstage", static () => new StageAsset { resourceId = "stage-" + Guid.NewGuid().ToString("N") }, out StageAsset? stage) || stage is null) return;
         bool changed = false;
         string title = stage.title, resource = stage.resourceId;
-        changed |= m_fields.Text("stage-title", m_fields.Localize("舞台名称"), ref title); stage.title = title;
-        changed |= m_fields.Text("stage-resource", m_fields.Localize("剧情资源 ID"), ref resource); stage.resourceId = resource;
+        changed |= m_fields.Text("stage-title", "Stage name", ref title); stage.title = title;
+        changed |= m_fields.Text("stage-resource", "Story resource ID", ref resource); stage.resourceId = resource;
         double designWidth = stage.width, designHeight = stage.height;
-        changed |= m_fields.Number("stage/width", m_fields.Localize("设计宽度"), ref designWidth, 1, 100000); stage.width = designWidth;
-        changed |= m_fields.Number("stage/height", m_fields.Localize("设计高度"), ref designHeight, 1, 100000); stage.height = designHeight;
-        if (ImGui.Button(m_fields.Label("添加纯色图层")))
+        changed |= m_fields.Number("stage/width", "Design width", ref designWidth, 1, 100000); stage.width = designWidth;
+        changed |= m_fields.Number("stage/height", "Design height", ref designHeight, 1, 100000); stage.height = designHeight;
+        if (ImGui.Button("Add solid-color layer"))
         {
-            Finish(); m_documents.Edit<StageAsset>(m_toolbar.documentId, m_fields.Localize("添加舞台图层"), candidate => m_selected = StageEditService.AddLayer(candidate)); return;
+            Finish(); m_documents.Edit<StageAsset>(m_toolbar.documentId, "Add stage layer", candidate => m_selected = StageEditService.AddLayer(candidate)); return;
         }
         foreach (StageLayer layer in stage.layers)
             if (ImGui.Selectable(layer.name + " · " + layer.group + "##" + layer.id, m_selected == layer.id)) { Finish(); m_selected = layer.id; }
@@ -82,32 +82,32 @@ public sealed class StageDesignerPanel : EditorPanel, IEditorPanelReloadState
         if (selected is not null)
         {
             string name = selected.name;
-            changed |= m_fields.Text(selected.id + "/name", m_fields.Localize("图层名称"), ref name); selected.name = name;
+            changed |= m_fields.Text(selected.id + "/name", "Layer name", ref name); selected.name = name;
             StageLayerGroup group = selected.group;
-            changed |= m_fields.SelectEnum(selected.id + "/band", "合成分组", ref group); selected.group = group;
+            changed |= m_fields.SelectEnum(selected.id + "/band", "Composition group", ref group); selected.group = group;
             double order = selected.order, width = selected.width, height = selected.height, parallax = selected.parallax;
-            changed |= m_fields.Number(selected.id + "/order", m_fields.Localize("组内顺序"), ref order, -1000000, 1000000); selected.order = (int)order;
-            changed |= m_fields.Number(selected.id + "/width", m_fields.Localize("图层宽度"), ref width, 0, 100000); selected.width = width;
-            changed |= m_fields.Number(selected.id + "/height", m_fields.Localize("图层高度"), ref height, 0, 100000); selected.height = height;
-            changed |= m_fields.Number(selected.id + "/parallax", m_fields.Localize("视差系数"), ref parallax, -1000, 1000); selected.parallax = parallax;
+            changed |= m_fields.Number(selected.id + "/order", "Order within group", ref order, -1000000, 1000000); selected.order = (int)order;
+            changed |= m_fields.Number(selected.id + "/width", "Layer width", ref width, 0, 100000); selected.width = width;
+            changed |= m_fields.Number(selected.id + "/height", "Layer height", ref height, 0, 100000); selected.height = height;
+            changed |= m_fields.Number(selected.id + "/parallax", "Parallax factor", ref parallax, -1000, 1000); selected.parallax = parallax;
             changed |= StageTransformFields.Draw(m_fields, selected.id, selected.transform);
             int mask = selected.mask;
             changed |= StageSurfaceFields.Draw(m_fields, selected.id, selected.surface, stage.textures, ref mask); selected.mask = mask;
-            if (NovelResourceSelection.Get<TextureAsset>(m_interactions) is { } maskImage && ImGui.Button(m_fields.Label("使用所选图像作为图层遮罩")))
+            if (NovelResourceSelection.Get<TextureAsset>(m_interactions) is { } maskImage && ImGui.Button("Use selected image as layer mask"))
             {
                 m_fields.Finish(); StageEditService.SetMask(stage, m_selected, maskImage); changed = true;
             }
             uint color = selected.color;
-            changed |= m_fields.Color(selected.id + "/color", m_fields.Localize("图层颜色"), ref color); selected.color = color;
+            changed |= m_fields.Color(selected.id + "/color", "Layer color", ref color); selected.color = color;
             bool visible = selected.visible;
-            changed |= m_fields.Toggle(selected.id + "/visible", "可见", ref visible); selected.visible = visible;
-            if (NovelResourceSelection.Get<TextureAsset>(m_interactions) is { } image && ImGui.Button(m_fields.Label("使用所选图像")))
-            { Finish(); m_documents.Edit<StageAsset>(m_toolbar.documentId, m_fields.Localize("设置舞台图像"), candidate => StageEditService.SetImage(candidate, m_selected, image)); return; }
+            changed |= m_fields.Toggle(selected.id + "/visible", "Visible", ref visible); selected.visible = visible;
+            if (NovelResourceSelection.Get<TextureAsset>(m_interactions) is { } image && ImGui.Button("Use selected image"))
+            { Finish(); m_documents.Edit<StageAsset>(m_toolbar.documentId, "Set stage image", candidate => StageEditService.SetImage(candidate, m_selected, image)); return; }
             ImGui.SameLine();
-            if (ImGui.Button(m_fields.Label("移除此图层")))
-            { Finish(); m_documents.Edit<StageAsset>(m_toolbar.documentId, m_fields.Localize("移除舞台图层"), candidate => StageEditService.RemoveLayer(candidate, m_selected)); m_selected = string.Empty; return; }
+            if (ImGui.Button("Remove this layer"))
+            { Finish(); m_documents.Edit<StageAsset>(m_toolbar.documentId, "Remove stage layer", candidate => StageEditService.RemoveLayer(candidate, m_selected)); m_selected = string.Empty; return; }
         }
-        if (changed) m_documents.Edit<StageAsset>(m_toolbar.documentId, m_fields.Localize("编辑舞台"), candidate =>
+        if (changed) m_documents.Edit<StageAsset>(m_toolbar.documentId, "Edit stage", candidate =>
         { candidate.title = stage.title; candidate.resourceId = stage.resourceId; candidate.width = stage.width; candidate.height = stage.height; candidate.layers = stage.layers; candidate.textures = stage.textures; }, m_fields.mergeKey);
         if (m_batch.Draw(m_documents, m_toolbar.documentId, stage, Finish)) return;
         var composition = new StageController(stage.textures); composition.SetStage(stage);

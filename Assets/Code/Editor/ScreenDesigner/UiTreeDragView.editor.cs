@@ -9,7 +9,7 @@ using Inno.VisualNovel.Editor.Localization;
 
 namespace Inno.VisualNovel.Editor.ScreenDesigner;
 
-internal sealed class UiTreeDragView(EditorTextView text)
+internal sealed class UiTreeDragView()
 {
     private const string m_payloadType = "INNO_VN_UI_TREE";
     private readonly Guid m_owner = Guid.NewGuid();
@@ -43,10 +43,10 @@ internal sealed class UiTreeDragView(EditorTextView text)
             if (placement == EditorDropPlacement.Into) draw.Rectangle(minimum, maximum, accent, 0, 2);
             else { float y = placement == EditorDropPlacement.Before ? minimum.Y : maximum.Y; draw.Line(new(minimum.X, y), new(maximum.X, y), accent, 2); }
             widgets.Hint(destination.sourceId + " → " + destination.parentId + " [" + (destination.index + 1) + "]"
-                + (destination.changesParent ? text.Localize(" · 松开后审阅新父元素的布局与裁切") : text.Localize(" · 松开调整同级顺序"))
-                + (destination.changesRowContext ? text.Localize(" · item.* 数据上下文将改变") : ""));
+                + (destination.changesParent ? " · Release to review the new parent's layout and clipping" : " · Release to reorder siblings")
+                + (destination.changesRowContext ? " · item.* data context will change" : ""));
             return delivered ? destination : null;
         }
-        catch (InvalidOperationException failure) { if (preview) widgets.Hint(text.Error(failure)); return null; }
+        catch (InvalidOperationException failure) { if (preview) widgets.Hint((failure).Message); return null; }
     }
 }

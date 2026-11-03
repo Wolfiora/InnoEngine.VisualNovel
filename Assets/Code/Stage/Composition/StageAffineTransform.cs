@@ -9,8 +9,7 @@ internal static class StageAffineTransform
 {
     internal static Matrix3x2 From(StageTransform transform)
     {
-        if (new[] { transform.x, transform.y, transform.pivotX, transform.pivotY, transform.scaleX, transform.scaleY, transform.rotation, transform.opacity }.Any(static value => !double.IsFinite(value) || Math.Abs(value) > 1e12)
-            || transform.opacity is < 0 or > 1) throw new ArgumentException("Stage transform must be finite and bounded.");
+        transform.Validate();
         return Matrix3x2.CreateTranslation((float)-transform.pivotX, (float)-transform.pivotY)
             * Matrix3x2.CreateScale((float)transform.scaleX, (float)transform.scaleY) * Matrix3x2.CreateRotation((float)(transform.rotation * Math.PI / 180))
             * Matrix3x2.CreateTranslation((float)transform.x, (float)transform.y);

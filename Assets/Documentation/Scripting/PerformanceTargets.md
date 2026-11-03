@@ -2,7 +2,7 @@
 
 `NovelPerformanceTargets` 让特殊玩法声明可由普通时间线驱动的标量通道。仍使用正常演出片段、目标槽、关键帧、剧情演出节点、舞台时钟与快照。
 
-在场景的 `NovelPlayerComponent` 创建会话前，通过 `ConfigurePerformanceTargets` 显式配置。目标以 `extension/` 开头，后面是自己的稳定 ID，例如 `extension/lamp`。每个目标声明允许的 `PerformanceProperty`，如 X、Y、Rotation 或 Opacity。字典和数组会被独立冻结，属性排列顺序不影响同一契约。与普通额外目标共同遵循舞台的 4096 目标预算。
+在场景的 `NovelSceneSystem` 创建会话前，通过 `ConfigurePerformanceTargets` 显式配置。目标以 `extension/` 开头，后面是自己的稳定 ID，例如 `extension/lamp`。每个目标声明允许的 `PerformanceProperty`，如 X、Y、Rotation 或 Opacity。字典和数组会被独立冻结，属性排列顺序不影响同一契约。与普通额外目标共同遵循舞台的 4096 目标预算。
 
 在时间线中使用普通目标槽，例如 `lamp`，并在演出节点的目标 ID 中填写 `extension/lamp`。会话准备会检查目标声明、资源、槽位和支持的轨道。普通播放、暂停、指定时间、完成保持、取消、并行任务清理均使用同一执行链。
 

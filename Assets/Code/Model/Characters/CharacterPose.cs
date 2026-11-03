@@ -10,7 +10,7 @@ public sealed class CharacterPose : ISerializable
     /// <summary>Gets or sets the stable pose identity.</summary>
     [SerializableProperty] public string id { get; set; } = "default";
     /// <summary>Gets or sets the display name.</summary>
-    [SerializableProperty] public string name { get; set; } = "默认姿势";
+    [SerializableProperty] public string name { get; set; } = "Default pose";
     /// <summary>Gets or sets authored parts.</summary>
     [SerializableProperty] public CharacterPart[] parts { get; set; } = [];
 

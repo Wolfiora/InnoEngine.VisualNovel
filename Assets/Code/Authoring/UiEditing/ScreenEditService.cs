@@ -36,7 +36,7 @@ public static class ScreenEditService
         UiElementDefinition parent = Find(screen, parentId);
         if (Flatten(screen).Count >= 9999) throw new InvalidOperationException("The page element budget was exceeded.");
         var element = new UiElementDefinition { id = Guid.NewGuid().ToString("N"), textId = Guid.NewGuid().ToString("N"), tooltipTextId = Guid.NewGuid().ToString("N"), kind = kind,
-            text = kind is UiElementKind.Text or UiElementKind.Button ? "新控件" : string.Empty,
+            text = kind is UiElementKind.Text or UiElementKind.Button ? "New control" : string.Empty,
             layout = new() { width = 280, height = kind is UiElementKind.Panel or UiElementKind.Scroll or UiElementKind.Horizontal or UiElementKind.Vertical or UiElementKind.Grid ? 240 : 56 } };
         parent.children = [.. parent.children, element]; return element.id;
     }

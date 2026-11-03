@@ -1,6 +1,6 @@
 # 普通存档的运行代码匹配
 
-普通存档必须匹配 `NovelSession.buildFingerprint`。它组合原生内容/剧情指纹、Model/Narrative/Stage/UI/Player 的已知实现，以及显式注册的命令、UI 动作、UI 数据源与宿主贡献。Scene 中的 `NovelPlayerComponent` 还加入 Rendering/Integration 的实现信息。调用者为 SaveService 传入会话的最终值，不能继续使用游戏资产的纯内容摘要。
+普通存档必须匹配 `NovelSession.buildFingerprint`。它组合原生内容/剧情指纹、Model/Narrative/Stage/UI/Player 的已知实现，以及显式注册的命令、UI 动作、UI 数据源与宿主贡献。Scene 中的 `NovelSceneSystem` 还加入 Rendering/Integration 的实现信息。调用者为 SaveService 传入会话的最终值，不能继续使用游戏资产的纯内容摘要。
 
 实现标记读取已知类型与显式工厂的公开 CLR 模块 MVID、类型名称和方法绑定，然后仅保留散列文本。[Microsoft 的 ModuleVersionId 契约](https://learn.microsoft.com/en-us/dotnet/api/system.reflection.module.moduleversionid?view=net-10.0)用于区分发布模块。这不执行程序集/目录扫描、不读取引擎私有成员、不引入扩展发现或另一套资产身份；也不把 CLR Type、Module、Method 或委托写入存档。
 

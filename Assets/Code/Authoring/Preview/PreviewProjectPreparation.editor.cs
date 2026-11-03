@@ -3,7 +3,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
+
 using System.Security.Cryptography;
 using InnoEngine.Assets;
 using InnoEditor.Assets;
@@ -20,7 +20,7 @@ namespace Inno.VisualNovel.Authoring.Preview;
 public sealed class PreviewProjectPreparation : IDisposable
 {
     private IEnumerator<bool>? m_steps;
-    private FormattableString m_progress = $"准备资源";
+    private string m_progress = $"Preparing resources";
     internal PreviewProjectPreparation(
         NovelProjectAsset context,
         StoryDocumentsModule stories,
@@ -41,9 +41,7 @@ public sealed class PreviewProjectPreparation : IDisposable
     /// <summary>Gets the owner-local cause for presentation before formatting; it is never part of a save or reload payload.</summary>
     public Exception? failure { get; private set; }
     /// <summary>Gets the current phase and source path without inventing a percentage.</summary>
-    public string progress => FormattableString.Invariant(m_progress);
-    /// <summary>Gets an independent source template and arguments for the current editor language without changing preparation state.</summary>
-    public FormattableString progressMessage => FormattableStringFactory.Create(m_progress.Format, m_progress.GetArguments().ToArray());
+    public string progress => m_progress;
     /// <summary>Gets the number of distinct sources captured so far.</summary>
     public int capturedSources { get; private set; }
     /// <summary>Executes bounded preparation steps and yields between native resource operations.</summary>
@@ -74,7 +72,7 @@ public sealed class PreviewProjectPreparation : IDisposable
     public void Cancel()
     {
         if (!running) return;
-        cancelled = true; m_progress = $"已取消预览准备"; Release();
+        cancelled = true; m_progress = $"Preview preparation cancelled"; Release();
     }
     /// <inheritdoc />
     public void Dispose() => Cancel();
@@ -92,17 +90,17 @@ public sealed class PreviewProjectPreparation : IDisposable
         var documents = new Dictionary<Guid, NativeDocumentStamp?>(); var hashes = new SortedDictionary<Guid, byte[]>();
         long bytes = 0; int depth = 0;
         if (context.isMissing || context.contentVersion != contextVersion || context.assetPath.ToString() != contextPath)
-            throw new AuthoringValidationException($"预览上下文在准备前已重新导入、移动或缺失，请重新运行。");
+            throw new AuthoringValidationException($"The preview context was reimported, moved or became missing before preparation. Run preview again.");
         foreach (bool step in Resolve(context)) yield return step;
         if (activeVariables is not null) foreach (bool step in Resolve(activeVariables)) yield return step;
         var project = copies[context.identity.persistentId] as NovelProjectAsset ?? throw new InvalidOperationException("Preview context is not a native VN game definition.");
-        m_progress = $"核对资源与草稿 · {stamps.Count}"; yield return true;
+        m_progress = $"Checking resources and drafts · {stamps.Count}"; yield return true;
         // The final validation and publication share one editor-thread step so an edit cannot slip between them.
         foreach (var captured in stamps.Values)
         {
             var current = Assets.Load<AssetObject>(captured.assetId);
             if (current.isMissing || current.contentVersion != captured.contentVersion || current.assetPath.ToString() != captured.path || !SameDocument(documents[captured.assetId], Stamp(AssetPath.Parse(captured.path))))
-                throw new AuthoringValidationException($"预览准备期间资源或草稿已变化，请重新运行：{captured.path}");
+                throw new AuthoringValidationException($"A resource or draft changed during preview preparation. Run it again: {captured.path}");
         }
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         hash.AppendData(context.identity.persistentId.ToByteArray());
@@ -110,7 +108,7 @@ public sealed class PreviewProjectPreparation : IDisposable
         project.buildFingerprint = Convert.ToHexString(hash.GetHashAndReset());
         result = new(project, stamps.Values.OrderBy(static source => source.path, StringComparer.Ordinal), copies.Where(static item => item.Value is VariableTableAsset)
             .ToDictionary(static item => item.Key, static item => (VariableTableAsset)item.Value));
-        m_progress = $"预览资源准备完成";
+        m_progress = $"Preview resources ready";
 
         NativeDocumentStamp? Stamp(AssetPath path) => stories.GetStamp(path) ?? resources.GetStamp(path);
         IEnumerable<bool> Resolve(AssetObject asset)
@@ -123,7 +121,7 @@ public sealed class PreviewProjectPreparation : IDisposable
                 Guid id = asset.identity.persistentId;
                 if (asset.isMissing || id == Guid.Empty || asset.assetPath.localPath.Length == 0) throw new InvalidOperationException("Preview requires an available persistent native resource: " + asset.assetPath);
                 if (copies.Count >= 10000) throw new InvalidOperationException("Preview resource closure exceeds its 10000-asset budget.");
-                m_progress = $"捕获资源 · {asset.assetPath}"; yield return true;
+                m_progress = $"Capturing resource · {asset.assetPath}"; yield return true;
                 var before = Stamp(asset.assetPath); bool dirty; AssetObject value;
                 if (asset is StoryAsset && stories.TryReadUnsaved(asset.assetPath, out var chapter)) { value = chapter!.ToAsset(); dirty = true; }
                 else if (resources.TryReadUnsaved(asset.assetPath, out var draft)) { value = draft!; dirty = true; }
@@ -144,7 +142,7 @@ public sealed class PreviewProjectPreparation : IDisposable
                     bool tableDirty = story.variableTable is not null && stamps[story.variableTable.identity.persistentId].unsaved;
                     if (dirty || tableDirty)
                     {
-                        m_progress = $"编译章节 · {story.chapterId}"; yield return true;
+                        m_progress = $"Compiling chapter · {story.chapterId}"; yield return true;
                         StoryAsset source = dirty ? story : stories.Inspect(asset.assetPath).draft.ToAsset();
                         source.variableTable = table; copy = PreviewContentBuilder.Compile(source, stories.compiler); copies[id] = copy;
                     }

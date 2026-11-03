@@ -22,9 +22,9 @@ Core 还暴露了 `Color`、向量、矩阵等基础类型。当前 UI/Shader �
 
 ## 原生 Scene → Object → Component
 
-创建游戏时，向导通过 `SceneEdits` 创建启动 Scene、普通 GameObject，添加 `NovelPlayerComponent`，设置游戏定义并保存 Scene。用户不需要手工实现会话调度器。
+创建游戏时，向导由 Authoring 的原生场景服务调用 SceneEdits 创建 Scene、添加 NovelSceneSystem，并创建真实镜头与初始背景对象；属性通过原生 History 记录。
 
-`NovelPlayerComponent : GameBehavior` 持有一个独立的 `NovelSession` 和游戏页面实例。原生 Update 使用 `Time.deltaTime` 推进；RenderModel 从宿主选定内容中的 Scene 查找活动组件。解释器和舞台是该组件内部的 VN 状态，不是另一套 Scene/Object 系统。舞台角色也不被机械扩展成一套通用 ECS。
+`NovelSceneSystem : GameSystem` 属于原生 Scene，统一拥有会话生命周期。新增原生图片、角色部位、粒子和屏幕效果组件的采集直接读取 GameObject/Transform；完整运行期剧情表现和 UI 对象化仍在迁移，见 NativeSceneAuthoring.md。
 
 - 会话只能由已加载 Scene 内的活动组件创建；游离、未加载、禁用或销毁的组件不能复活游戏。
 - 禁用组件、停用 GameObject、移除组件、销毁 GameObject 和卸载 Scene 均由引擎生命周期回调停止组件所拥有的会话。

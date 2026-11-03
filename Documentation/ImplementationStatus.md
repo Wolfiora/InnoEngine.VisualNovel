@@ -1,8 +1,45 @@
 # 实施状态
 
+2026-11-03 按用户要求停止扩展，准备交接重构：撤回本轮启动修复之后新增的数值步进控件、设置页生成器及其专用测试，避免把进行中的新功能混入停工基线；保留 Inspector/工作区依赖注入修复与真实注册回归。未整体重置工作区，既有场景化工作仍保留。最终收口正式编译通过（`StopCheckpoint-Formal.txt`）；`StopCheckpoint-Contracts.txt` 验证 14 个 Inspector 注册及原生 History/Prefab/场景保存重开，1 项通过、0 失败。两个已安装包与修复包 SHA-256 一致。没有进行桌面启动、GUI/GPU 或设备验收。全计划仍未完成，尤其是旧表现树到原生场景运行、完整页面和快照迁移。
+
+2026-11-03 实际启动缺陷修复：用户启动日志证明 `NovelCameraInspector` 构造请求了宿主没有注入的 `IInspectionPropertyEditService`，导致整个脚本候选重载失败、原生组件显示 Missing。已统一修正 11 个 Inspector 和剧情工作区，使用实际提供的 `SceneEdits` 适配原生属性 History；没有改组件身份或重建场景。`InspectorActivation-Before.txt` 在旧程序集上复现同一错误，`InspectorActivation-FinalFormal.txt` 正式编译通过，`InspectorActivation-After.txt` 验证 14 个 VN Drawer 进入引擎注册表并通过原生 History/保存重开（1 项定向，不重跑全量）。修复包已经重新导出并更新两个消费工程，桌面启动仍待用户实际确认。此前“零 Missing”检查没有启动 Inspector 注册链，不能覆盖实际 Editor 启动；本次明确补上该覆盖缺口。
+
+上一增量检查点（不含启动修复）：候选包 `8252A8C657F7B565B8EC7700A1C80D2FCED634A778BD2A96B1A08E84FD27A4C6` 已安装到 TestProject / NeonZero。两个实际目录分别正式编译/激活、三个 Scene 零 Missing，24 对象 UI 示例的实际后端模态交互、舞台与两条剧情路线通过。完整回归 `NativeUi-CollectionFullContracts.txt` 为 260 通过、0 失败；Windows 独立构建仍因 SDK/Support Pack 序列化生成接口不匹配失败。备份、精确证据、未完成实施与 API 限制见 [消费工程报告](Specifications/NativeConsumerAcceptance.md)。**仍未完成整个计划，且没有 GUI/GPU/设备或实际体验验收。**
+
+原生恢复身份核对：`NativeIdentity-RuntimeApi.txt` 直接检查选定正式 Runtime API 元数据，确认 `GameObject.prefabInstance`、`PrefabInstanceInfo.sourceAssetId/sourceObjectId/instanceRoot` 与 `GameScene.InstantiatePrefab` 已导出；因此不能把 Prefab 来源或实例化整体列为 SDK 阻塞。`SceneAsset.Capture/Instantiate`、`SerializationRegistry` 则未在此 Runtime 脚本面开放。现有对象引用在原生保存重开/Prefab 实例中会重映射；完整 VN 动态对象恢复协议仍需实施，不能把运行中的对象 GUID 直接当作跨启动稳定内容身份。
+
+2026-11-03 默认控件交互修复：消费工程中发现带默认字体的按钮可被命中却不产生点击。原因是引擎 Click 的目标落在没有场景身份的富文本内部片段；现已让纯排版片段继承 `pointer-events:none`，由实际控件拥有输入。`NativeUi-TextClickBefore.txt` 记录失败，`NativeUi-TextClickFormal.txt` 正式编译/激活、`NativeUi-TextClickAfter.txt` 17 项相关检查及 `NativeUi-TextClickArchitecture.txt` 十程序集检查通过。候选安装包重建的 TestProject 原生 UI Workshop 已通过真实无窗口后端的打开/关闭模态页面。该证据不包含桌面/GPU 验收；最新实际安装状态见消费记录。
+
+最近完整行为回归 `NativeUi-NavigationFullContracts.txt` 为 260 通过、0 失败；其后上述实际消费检查仍发现了默认文字按钮覆盖缺口，不能用总数替代功能完成度。
+
+原生列表分页已追加：真实按钮通过 `NovelUiListNavigationComponent` 引用同 Scene 的 List，首页/前页/后页/末页更新实际窗口；边界、停用与缺失目标禁用，列表仍通过原生 Prefab 生成有限条目。List Inspector 提供内置/扩展集合搜索，复用原生属性 History。`NativeUi-CollectionAuthoringFormal.txt` 与 `NativeUi-CollectionAuthoringContracts.txt`（17 项）通过，含实际引擎按钮点击、部分末页、失效目标、原生 Undo/Redo 和 Prefab 目标重映射。生成对象整体快照与完整游戏壳迁移仍未完成。
+
+2026-11-03 Inspector 增量：原生 UI Binding / Story Action 组件已提供可搜索的字段、Boolean 条件、开关写回、系统/扩展动作和参数选择器；复用现有类型化目录及原生属性 History，不要求作者记字段字符串。界面目录随导入资产版本刷新，未知路径仍可在 Advanced 中明确编辑。`NativeUi-InspectorsFormal.txt`、`NativeUi-InspectorsContracts.txt` 的 18 项定向检查与 `NativeUi-InspectorsArchitecture.txt` 的十程序集检查通过，包含绑定操作 Undo/Redo、原生 Prefab 与保存重开；实际 Inspector 操作手感未实机验收。
+
+2026-11-03 原生 UI 运行闭环追加：显式场景目标绑定、Include UI 屏幕效果、包含原生网格的输出转场声明与截图冻结、多 Canvas 输入归属、模态遮挡、失焦/按下目标消失后的释放保护已实现。页面导航按钮引用真实 Page，支持显示、关闭和替换；没有剧情资产的原生场景也能在正式 Play 更新中准备帧和执行页面操作。`NativeUi-PageNavigationFormal.txt` 正式编译与候选激活通过，`NativeUi-PageNavigationContracts.txt` 18 项定向通过，其中实际无窗口 UI 后端中执行了独立 RuntimeSession、输入排队、重复 Prepare、防止渲染期副作用、实际对象启停和失败目标保留。普通游戏会话也可以从原生按钮调用同一个游戏壳动作入口；完整旧页面/StageController 迁移仍未完成。本批尚未包含在下方 B62A25AB 的历史安装包中，最新分发以消费记录为准。
+
+2026-11-03 UI 后续：原生页面初始焦点、页面返回恢复、字体覆盖、镜头图层/粒子视差及显式停止后不自动重启已正式编译，并通过 15 项定向检查，见 `NativeScene-LifecycleFormal.txt`、`NativeScene-LifecycleContracts.txt`。模板自动生成受到实际 FontAsset 公开源路径为空的限制；不可用按钮已移除，详见 UI 接入文档。本批已导出为 B62A25AB 候选包，安装到两个实际工程并重新通过正式编译、零 Missing、UI/舞台及剧情路线检查，详见消费记录。完整 Play 迁移仍未完成。
+
+2026-11-03 消费工程追加：正式演出候选包 `5848E400DA4A28D7F09D0DCDB264AEDD07F8C4D7C17C214C170080EF47C0468A` 已安装到 TestProject 与 NeonZero；三个场景各有一个真实 System，正式编译/激活/零 Missing 通过。实际目录的 UI、舞台组件、静音演出及两条剧情路线再次通过。两个项目新增原生 Stage Workshop 和两个角色 Prefab，原游戏入口保留。详见 [消费工程记录](Specifications/NativeConsumerAcceptance.md)。这些是组件与内容交付进展；全计划和完整 Play 迁移仍未完成。
+
+2026-11-03 原生演出补充：`NovelAudioComponent` 已复用现有音频策略与公开 Audio 适配器，支持对象生命周期、独立增益、暂停、淡变、位置快照、候选失败保留及 Volume 时间线。屏幕效果支持对象独立参数覆盖，时间线按效果机制校验通道，多个参数共同写入不会修改共享预设。原生镜头跟随写真实 Transform，震动为独立通道；被动采集不推进跟随，目标停用/删除和位置轨道冲突有明确行为。System 停止清理生成列表和场景音频。正式编译、原生 History/保存重开及 14 项相关定向检查通过，见 `NativeCamera-Formal.txt`、`NativeCamera-Contracts.txt`；随后新增创建入口正式编译与十程序集检查通过，见 `NativeAuthoring-Formal.txt`、`NativeAuthoring-Architecture.txt`。剧情音频目标、动态对象快照和完整 Play 迁移仍未完成；没有实际音频设备或 GPU 验收。
+
+2026-11-03 后续：新增引擎 UI Boolean 开关写回、富文本/Ruby/字素揭示投影、原生 Grid 布局、旋转 Canvas 精确三角形裁切；Page/Container Inspector 提供子对象创建并联动原生选择。正式编译与 13 项相关检查通过，含真实无窗口后端和原生 History、Prefab 引用隔离、保存重开。两个实际消费工程已安装候选包并通过正式编译、模块激活及零 Missing 场景重开检查；NeonZero 旧 holder 已通过原生创作服务重建为 System、镜头和背景。两个指定工程的 editor.ini 已有原样备份及一致的原生制作停靠布局。详见 [消费工程记录](Specifications/NativeConsumerAcceptance.md)。**这些进展不表示全计划完成；Play 表现迁移、完整原生页面/快照等仍有剩余。**
+
+2026-11-03 UI 接入按用户要求调整为 **Scene 对象权威 + 引擎 UI 服务**。已建立真实 UI 组件、引擎文档投影、默认字体模板与原生 Inspector 创建入口。制作态 Scene/Game 消费 IUiService 的真实三角形和字形纹理，Scene 选择使用同一引擎文档；临时增加的独立原生 UI 布局/命中/输入路径已删除。23 项相关检查通过，包括实际无窗口后端的按钮点击、Tab/Enter、中文/日文/英文文字、重复增量帧、System 首帧、对象停用及对象选择；还包含旧运行逻辑的相关回归，不能将总数当作全部新 UI 功能完成。详见 [引擎 UI 接入](Architecture/EngineUiIntegration.md)。**Play 游戏壳、全套控件/页面及完整重构仍未完成，尚未 GUI/GPU 验收。**
+
+2026-11-02 原生场景制作重构进行中，**R0～R7 未完成**。英文编辑器语言模块、翻译表、Settings 开关与包装已移除，游戏本地化保留。原生 System、图片、镜头、目标、角色部位、粒子、屏幕效果及基础时间线已实现；制作态采集与原生生命周期分离，正式脚本编译通过。251 项行为检查通过、0 失败，十程序集依赖检查通过；其中原生对象测试覆盖变换/启停/删除、Prefab、逐步 History、保存重开、组件引用、时间线冲突与失败拒绝。详见 [原生场景制作重构](Architecture/NativeSceneAuthoring.md)。
+
+随后新增了原生默认材质，空场景添加 System 和图片即可生成被动画面。最终正式编译与候选激活再次通过；9 项原生场景定向检查及时间线真实 History/保存重开检查通过，详见 `SceneRefactor-DefaultsFormal.txt`、`SceneRefactor-DefaultsContracts.txt`、`SceneRefactor-PerformanceHistory.txt`。这些是 251 项完整回归之后的定向证据，仍未进行实际 GPU 显示。
+
+实际剩余：剧情运行仍存在旧 StageController / NovelGameView 路径；完整 UI 对象化、所有演出/音频目标、原生对象快照、完整 Prefab 页面、三主题/模板/demo 重建及发行尚未完成。不能把旧功能基线或新增组件数量换算成重构完成率。已确认的局部 SDK 限制为隔离 Play/Preview 入口未导出、复合结构事务 Redo 预检查失败；后者已使用独立原生操作保持可撤销/重做。两项限制不阻塞其余全部工作。
+
+本轮没有启动软件或操作桌面，没有 GUI、GPU、鼠标、手柄及 IME 实机验收。后续需要手动测试时提供具体操作与预期结果。下面保留重构前的历史记录，其旧架构或实机结论不能作为本次重构的证据。
+2026-11-02 Story 案例交付：InnoEngine 始终只读。三章、三角色、19 页、147 个音频提示已落盘；最终包冷导入后两条原生路线通过（134/137 条历史）。246 项完整行为基线及后续输入/音频/设置 29 项、捕获 4 项、布局 14 项、原生闭包 4 项定向通过。最终正式编译与十程序集检查见 Story-SourceDependencyCompile.txt。D3D11 实际走完两个结局，验证标题、设置、阅读、选择、战斗图集、演出、CG、音乐鉴赏与回想。真实 PNG 缩略图和手动/自动/快速槽已落盘；正常关闭并重开 Editor 后，手动读档恢复成功，两个结局记录仍保留，设置也已跨重启恢复。仅归档本次验收数据，用户下次从默认设置开始。具体范围与证据见 Story/Documentation/Acceptance.md；不据此宣称整个插件 v1、全部设备或独立成品已完成。以下早期无 GUI 结论保留各自历史范围。
+
 完整 v1 仍在实施，P0～P8 尚未全部达到原计划门槛。这里分别记录功能、验证和阻塞，不把逻辑契约数量换算成产品完成率。
 
-最近完整行为基线为 **244 项通过、0 失败**，见 `artifacts/Reports/Contracts-244-TranslationReview.txt`。正式 Scripting API 编译、原生源候选激活和十程序集检查通过，见 `TranslationReview-FinalOwnedFormalCompile.txt`。该完整回归已纳入翻译导入的列映射、跨语言原文冲突、原子应用、原生 Undo/Redo/保存重开、统一占位符解析，以及确定性演出扩展通道、原生组件配置与生命周期，以及资源分类标签、跨章节调试来源查询和预览进度隔离。图中调试标记、概览及点击导航已正式编译，实际鼠标、焦点、显示和输入法操作没有实机验收。
+此前翻译审核阶段的完整行为基线为 **244 项通过、0 失败**，见 `artifacts/Reports/Contracts-244-TranslationReview.txt`。正式 Scripting API 编译、原生源候选激活和十程序集检查通过，见 `TranslationReview-FinalOwnedFormalCompile.txt`。该完整回归已纳入翻译导入的列映射、跨语言原文冲突、原子应用、原生 Undo/Redo/保存重开、统一占位符解析，以及确定性演出扩展通道、原生组件配置与生命周期，以及资源分类标签、跨章节调试来源查询和预览进度隔离。图中调试标记、概览及点击导航已正式编译，实际鼠标、焦点、显示和输入法操作没有实机验收。
 
 明确等待复用原有等待节点与执行器，不创建空对白。预览画布改用生产 `InnoNovelInput` 映射；公开的原生文本表单通过普通 UI 输入同步当前文本框或选择器查询，姓名提交仍进入普通路线记录。普通失焦关闭弹层，明确的文本桥可保留其临时查询。EditorUiInput 的正式裁剪成员没有提交文字缓冲区，证据 `Editor-PreviewInputSurface.txt`；当前不猜测键盘字符，不宣称画布直接 Unicode 输入已接入。
 
@@ -30,7 +67,7 @@
 
 最新已验证分发包为 **240 项完整回归检查点**。证据 `Distribution-240-CardAndDiagnostics.txt`：源码指纹 `B7FC95A18EC41A5BF47185113ED6202F14D1399D7ED4963970FCDF84B5D956CA`，包 SHA-256 `C7F841E4C5A0D160C012198854E49D39CCDFE5FD22484F586C7F0716155808EF`，18,713,504 字节；消费工程 `CleanConsumer-c3572466f22c470bb4e81693db9a1ff7`。十个程序集，无其他功能插件依赖。包含 2,155 对编辑器资源、菜单导航、明确推进等待、预览文字桥、卡片换序及原生图诊断。随后正在补的资源分类标签不属于这个包。
 
-当前遵循用户要求，不使用 Computer Use，不做 GUI、GPU、字体后端、音频/手柄设备或 Windows 成品实机验收；较早的局部 GUI 证据不覆盖现在的改动。既有三个 Shader pass 的 D3D11 离线编译见 `StageSurface-OfflineShaders.txt`，此后未改 Shader。视频、流媒体和相应播放 backend 按用户要求排除。
+此前阶段遵循当时用户要求，未使用 Computer Use，未做 GUI、GPU、字体后端、音频/手柄设备或 Windows 成品实机验收；较早的局部 GUI 证据不覆盖现在的改动。既有三个 Shader pass 的 D3D11 离线编译见 `StageSurface-OfflineShaders.txt`，此后未改 Shader。视频、流媒体和相应播放 backend 按用户要求排除。
 
 Windows 无界面构建尚未取得成品：基线 SDK 与现有 Support Pack 的序列化 API 不一致；另一份现存 SourceDebug SDK 又缺少当前编辑器正式 API。见 `Architecture/ValidationOwnership.md`。验证只用明确选定的现有引擎构建和公开宿主 API，不改引擎源码或全局缓存。自动冷加载仍有 [宿主准备前提](Decisions/0003-HeadlessResourceReadiness.md)，干净消费编译不能代替首次使用验收。
 

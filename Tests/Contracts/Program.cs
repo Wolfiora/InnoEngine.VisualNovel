@@ -34,16 +34,21 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
+        if (Environment.GetEnvironmentVariable("INNO_VN_REBUILD_CONSUMER") is { Length: > 0 } consumer)
+        { ConsumerSceneFixture.Rebuild(Environment.CurrentDirectory, consumer); return 0; }
+        if (Environment.GetEnvironmentVariable("INNO_VN_VERIFY_CONSUMER") is { Length: > 0 } installed)
+        { ConsumerSceneFixture.Rebuild(Environment.CurrentDirectory, installed, true); return 0; }
         var identities = new IdentityAllocator();
         using IDisposable identityScope = identities.EnterScope();
         var sceneAssets = Environment.GetEnvironmentVariable("INNO_VN_PREPARE_GAME_BUILD") == "1"
             ? System.Runtime.Loader.AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Inno.Scene.Assets.dll")) : typeof(Program).Assembly;
         using var modules = new ModuleHost(new ModuleHostOptions { catalogSource = new DotNetAssemblyCatalogSource(typeof(Program).Assembly,
+            typeof(Inno.Build.Toolchains.Bgfx.Tools.BgfxShaderSourceFrontend).Assembly,
             typeof(Inno.Rendering.Assets.Authoring.ShaderGraphSourceStore).Assembly, typeof(Inno.Audio.Assets.AudioClipImporter).Assembly,
-            typeof(Inno.Text.Assets.FontImporter).Assembly, sceneAssets) });
+            typeof(Inno.Text.Assets.FontImporter).Assembly, typeof(Inno.Adapter.UI.RmlUi.Authoring.RmlUiDocumentFrontend).Assembly, sceneAssets) });
         _ = modules.Register("visualnovel.runtime-contracts", [typeof(StoryAsset).Assembly, typeof(StoryMachine).Assembly, typeof(PerformancePlayer).Assembly,
             typeof(Inno.VisualNovel.UI.Documents.UiDocumentInstance).Assembly, typeof(Inno.VisualNovel.Player.Sessions.NovelSession).Assembly,
-            typeof(Inno.VisualNovel.Integration.Hosting.NovelPlayerComponent).Assembly]);
+            typeof(Inno.VisualNovel.Integration.Hosting.NovelSceneSystem).Assembly]);
         _ = modules.Register("visualnovel.editor-contracts", [typeof(StoryCompiler).Assembly, typeof(FirstStoryTemplate).Assembly]);
         _ = modules.Register("visualnovel.font-import-contracts", [typeof(Inno.Text.Assets.FontImporter).Assembly]);
         using var types = new TypeCatalog(modules, new ReflectionTypeCatalogSource());
@@ -54,8 +59,23 @@ internal static class Program
         var edits = new StoryEditService(codec);
         int passed = 0;
         var failures = new List<string>();
-        Run("editor language catalogs preserve native literal formats control identities isolated owners and atomic replacement", () => EditorLanguageContracts.NativeCatalogIdentityAndIsolation(serialization));
-        Run("editor language preferences use native Settings events History rejected candidates and project restart", () => EditorLanguageSettingsContracts.NativePreferenceHistoryAndRestart(Directory.GetCurrentDirectory()));
+        Run("engine UI actual native backend produces offscreen geometry and scene button actions", () => EngineUiSceneContracts.NativeBackendProducesGeometryWithoutDesktop(identities, types, modules, serialization));
+        Run("engine UI service owns interaction while native scene objects own document content", () => EngineUiSceneContracts.EngineOwnsInteractionAndNativeObjectsOwnContent(identities, types));
+        Run("engine UI unsupported capabilities and failed candidates preserve the valid document", () => EngineUiSceneContracts.CandidateFailureDoesNotReplaceTheDocument(identities, types));
+        Run("engine UI rotated clipping preserves area UVs and detached resource generations", EngineUiGeometryContracts.RotatedClipsRetainTextureCoordinatesAndDetachedFrames);
+        Run("native scene presentation follows actual objects without starting a story", () => NativeScenePresentationContracts.ObjectsAreTheOnlyPresentationAuthority(identities, types, serialization));
+        Run("native scene defaults display without a game or Play and retain build dependencies", () => NativeSceneMaterialContracts.BareSceneUsesNativePackagedDefaults(Environment.CurrentDirectory, modules, types, serialization, identities));
+        Run("native scene authoring uses real History Prefab saving and scene reopening", () => NativeSceneHistoryContracts.CreateUndoPrefabAndReopen(args.Length == 2 ? Path.GetFullPath(args[1]) : Environment.CurrentDirectory));
+        Run("native scene performances write actual targets with atomic conflict validation", () => NativePerformanceContracts.ExplicitWritersAndAtomicTargets(identities, types));
+        Run("native scene audio reuses cue policy and owns restoration fades volume tracks and parent lifetime", () => NativeAudioContracts.NativeLifetimeAndSharedPolicy(identities, types));
+        Run("native scene effects obey component clocks transforms and inactive parents", () => NativeSceneEffectsContracts.ComponentClocksAndParentOwnership(identities, types));
+        Run("native scene characters use actual parts and reject incomplete appearances atomically", () => NativeSceneEffectsContracts.RealCharacterPartsAndAtomicAppearance(identities, types));
+        Run("native scene output and camera use explicit ownership", () => NativeScenePresentationContracts.OutputAndCameraOwnership(identities, types));
+        Run("native scene camera parallax preserves transforms picking particles and editor navigation", () => NativeParallaxContracts.CameraTranslationPreservesNativeOwnership(identities, types));
+        Run("native scene target bindings retain explicit identities types inactive objects and missing references", () => NativeTargetBindingContracts.ExplicitReferencesDoNotRepairByName(identities, types));
+        Run("native scene Prefab instances preserve ownership through native serialization", () => NativeScenePresentationContracts.PrefabInstancesAndNativeRoundTrip(identities, types, serialization));
+        Run("frame-owned native storage preserves chained IO across retired scopes and cancels queued consumers", FrameStorageContracts.NativeIoAcrossRetiredFrames);
+        Run("persistence IO completes without capturing an unpumped host synchronization context", () => FrameStorageContracts.PersistenceWithoutCallerPump(serialization));
         Run("exact-build code fingerprints freeze concrete commands UI registrations host contributions and atomic native restoration", () => CodeFingerprintContracts.FrozenRegistrationsAndNativeRestoration(codec, compiler, serialization));
         Run("exact-build code fingerprints reject factory implementation substitution before story execution", () => CodeFingerprintContracts.ChangedFactoryFailsBeforeExecution(codec, compiler));
         Run("single-line input preserves grapheme caret ranges bounded replacement composition rejected writes and native capture", () => TextInputContracts.EditingGraphemesLimitsAndNativeCapture(serialization));
@@ -91,7 +111,7 @@ internal static class Program
         Run("script card reordering preserves native graph identities layout projection and actual execution", () => StoryReorderContracts.LinearIdentityAndExecution(native, codec, compiler));
         Run("script card moves review branch changes and atomically reject stale entries and invalid scopes", () => StoryReorderContracts.ReviewedBoundariesAndAtomicRejection(native, codec, compiler));
         Run("script card drops resolve exact graph edges and reject ambiguous structural destinations", () => StoryReorderContracts.CardDropDestinations(native, codec, compiler));
-        Run("native compiler diagnostics retain node edge identity isolated language arguments and program content", () => CompilerDiagnosticContracts.NativeIdentityAndOwnerFormatting(native, codec, compiler));
+        Run("native compiler diagnostics retain node edge identity English messages and authored values", () => CompilerDiagnosticContracts.NativeIdentityAndOwnerFormatting(native, codec, compiler));
         Run("extension performance channels retain production time native saves rollback cancellation and replay isolation", () => ExtensionPerformanceContracts.SharedClockNativeRestoreRollbackAndReplay(codec, compiler, serialization));
         Run("extension performance contracts freeze capabilities validate bindings and reject incompatible saves atomically", () => ExtensionPerformanceContracts.FrozenCapabilitiesAndExactSaveIdentity(codec, compiler, serialization));
         Run("UI canvas edge handles preserve measured anchors pivots snapping native layouts and gesture origins", () => UiCanvasContracts.MeasuredTransformsAndNativeLayout(serialization));
@@ -370,6 +390,7 @@ internal static class Program
         Run("stage affine geometry and rejected restoration are atomic", StageContracts.GeometryAndAtomicRestore);
         Run("stage crop source and pixel pivots preserve native snapshots and atomic candidates", () => StageSurfaceContracts.CropPivotAndRestore(serialization));
         Run("stage masks and blend plans preserve backdrop alpha dependencies and packed UVs", StageSurfaceContracts.ImagePlanAndVertices);
+        Run("native scene engine UI image effects output transitions and delayed captures retain mesh ownership", NativeUiImagePlanContracts.EffectsTransitionsAndCaptureOwnership);
         Run("character variant edits preserve explicit defaults independent copies and source addressed missing references", () => CharacterVariantContracts.DefaultsAndReferences(codec, compiler, edits));
         Run("narrative stage requests and rollback share one session", () => StageContracts.NarrativeCoordination(codec, compiler, edits));
         Run("native session candidates reject damage without replacing active state", () => PersistenceContracts.SessionCandidates(codec, compiler, serialization));
@@ -495,7 +516,7 @@ internal static class Program
         Run("explicit advance waits retain one parallel input owner and independent native sibling clocks", () => AdvanceWaitContracts.ParallelScopeAndNativeTasks(codec, compiler, serialization));
         Run("explicit advance waits support local preview recorded routes and exact interactive targets", () => AdvanceWaitContracts.LocalAndRecordedRouteTargets(codec, compiler));
         Run("preview native text bridges preserve full Unicode clearing focus release and recorded input submission", () => PreviewTextBridgeContracts.FullUnicodeValueClearingAndRecordedSubmission(codec, compiler));
-        Run("authoring diagnostics preserve native language sources literal user values ordinary exceptions and owner isolation", () => AuthoringDiagnosticContracts.NativeResourcesActualErrorsAndLiteralValues(serialization));
+        Run("English authoring diagnostics preserve literal user values and exception causes", () => AuthoringDiagnosticContracts.NativeResourcesActualErrorsAndLiteralValues(serialization));
         Run("typed C# commands restore neutral continuations results and cancellation", () => CommandContracts.SaveRestoreAndCancellation(codec, compiler, serialization));
         Run("external command policies enforce preview save and rollback boundaries", () => CommandContracts.SideEffectPolicies(codec, compiler));
         Run("parallel scopes restore child waits and preserve copied identities", () => ParallelContracts.TimingRestoreAndScope(codec, compiler, serialization));

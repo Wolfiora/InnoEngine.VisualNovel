@@ -23,39 +23,39 @@ internal sealed class StoryVariableLibraryView(
         StoryDraftState draft,
         Action<string> selectNode
     ) {
-        ImGui.SeparatorText(fields.Localize("共享变量库"));
+        ImGui.SeparatorText("Shared variable library");
         var table = draft.ResolveVariableTable();
         if (table is not null)
         {
-            EditorUiSession.current.widgets.Hint(table.isMissing ? fields.Localize("缺失变量库 · ") + draft.variableTablePath : table.title + " · " + table.assetPath);
-            if (!table.isMissing && ImGui.Button(fields.Label("打开变量库文档"))) { fields.Finish(); resources.Open(table.assetPath); }
-            if (!table.isMissing && ImGui.Button(fields.Label("解除引用并保留全部声明")))
-            { fields.Finish(); documents.Edit(documents.activeDocumentId, fields.Localize("解除共享变量库并保留声明"), StoryVariableBindingService.Detach); return true; }
-            if (table.isMissing && ImGui.Button(fields.Label("清除缺失引用，保留图与本章声明")))
-            { fields.Finish(); documents.Edit(documents.activeDocumentId, fields.Localize("清除缺失变量库引用"), StoryVariableBindingService.ClearMissing); return true; }
+            EditorUiSession.current.widgets.Hint(table.isMissing ? "Missing variable library · " + draft.variableTablePath : table.title + " · " + table.assetPath);
+            if (!table.isMissing && ImGui.Button("Open variable library document")) { fields.Finish(); resources.Open(table.assetPath); }
+            if (!table.isMissing && ImGui.Button("Unlink and retain all declarations"))
+            { fields.Finish(); documents.Edit(documents.activeDocumentId, "Unlink shared variable library and retain declarations", StoryVariableBindingService.Detach); return true; }
+            if (table.isMissing && ImGui.Button("Clear missing reference, keeping graph and chapter declarations"))
+            { fields.Finish(); documents.Edit(documents.activeDocumentId, "Clear missing variable library reference", StoryVariableBindingService.ClearMissing); return true; }
             if (!table.isMissing)
             {
                 var usages = new Authoring.StoryEditing.VariableEditService(documents.codec);
                 foreach (var variable in table.variables)
                 {
-                    ImGui.Text(fields.Localize("共享 · ") + variable.name + " · " + variable.id + " · " + variable.initialValue.kind);
+                    ImGui.Text("Shared · " + variable.name + " · " + variable.id + " · " + variable.initialValue.kind);
                     foreach (string node in usages.FindUsages(draft, variable.id))
-                        if (ImGui.Selectable(fields.Caption("定位 " + node + "##shared/" + variable.id + "/" + node, fields.Localize("定位 ") + node + "##shared/" + variable.id + "/" + node))) { fields.Finish(); selectNode(node); }
+                        if (ImGui.Selectable("Locate " + node + "##shared/" + variable.id + "/" + node)) { fields.Finish(); selectNode(node); }
                 }
             }
         }
-        else EditorUiSession.current.widgets.Hint(fields.Localize("未分配。可让多个章节引用同一份 Game/Global 声明；调用局部变量保留在章节中。"));
-        fields.Toggle("shared/hand-over", "允许移交完全相同的章内声明", ref m_handOver);
-        if (NovelResourceSelection.Get<VariableTableAsset>(interactions) is { } selected && ImGui.Button(fields.Label("引用所选共享变量库")))
-        { fields.Finish(); documents.Edit(documents.activeDocumentId, fields.Localize("引用共享变量库"), state => StoryVariableBindingService.Attach(state, selected, m_handOver)); return true; }
-        if (table is null && ImGui.Button(fields.Label("创建变量库并移交 Game/Global 声明")))
+        else EditorUiSession.current.widgets.Hint("Unassigned. Multiple chapters can reference the same Game/Global declarations; call-local variables remain in chapters.");
+        fields.Toggle("shared/hand-over", "Allow transferring identical chapter declarations", ref m_handOver);
+        if (NovelResourceSelection.Get<VariableTableAsset>(interactions) is { } selected && ImGui.Button("Reference selected shared variable library"))
+        { fields.Finish(); documents.Edit(documents.activeDocumentId, "Reference shared variable library", state => StoryVariableBindingService.Attach(state, selected, m_handOver)); return true; }
+        if (table is null && ImGui.Button("Create library and transfer Game/Global declarations"))
         {
             fields.Finish();
-            var created = resources.Create(new VariableTableAsset { title = draft.title + " · 共享变量", variables = draft.variables.Where(static item => item.scope != VariableScope.Local).Select(VariableValueRules.Copy).ToArray() });
+            var created = resources.Create(new VariableTableAsset { title = draft.title + " · Shared variables", variables = draft.variables.Where(static item => item.scope != VariableScope.Local).Select(VariableValueRules.Copy).ToArray() });
             var canonical = Assets.Load<VariableTableAsset>(AssetPath.Parse(created.assetPath));
-            documents.Edit(documents.activeDocumentId, fields.Localize("创建并引用共享变量库"), state => StoryVariableBindingService.Attach(state, canonical, true)); return true;
+            documents.Edit(documents.activeDocumentId, "Create and reference shared variable library", state => StoryVariableBindingService.Attach(state, canonical, true)); return true;
         }
-        ImGui.SeparatorText(fields.Localize("章内声明"));
+        ImGui.SeparatorText("Chapter declarations");
         return false;
     }
 }

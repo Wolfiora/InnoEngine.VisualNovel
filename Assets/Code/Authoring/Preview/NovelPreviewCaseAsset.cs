@@ -11,7 +11,7 @@ namespace Inno.VisualNovel.Authoring.Preview;
 public sealed class NovelPreviewCaseAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing test name.</summary>
-    [SerializableProperty] public string title { get; set; } = "预览用例";
+    [SerializableProperty] public string title { get; set; } = "Preview case";
     /// <summary>Gets or sets explicit complete, local or route semantics.</summary>
     [SerializableProperty] public PreviewRunMode mode { get; set; }
     /// <summary>Gets or sets the entry chapter, empty for the project's initial chapter.</summary>

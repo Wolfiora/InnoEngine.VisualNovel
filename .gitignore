@@ -6,5 +6,6 @@ artifacts/
 Inno.*.csproj
 InnoProject.sln
 editor.ini
+Settings.Editor.inno
 .vs/
 .idea/

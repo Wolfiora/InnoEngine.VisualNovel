@@ -26,7 +26,7 @@ public static class PreviewSourceNavigator
     ) {
         ArgumentNullException.ThrowIfNull(context); ArgumentNullException.ThrowIfNull(stories);
         if (string.IsNullOrWhiteSpace(chapter) || string.IsNullOrWhiteSpace(node))
-            throw new AuthoringValidationException($"调试定位需要非空的章节和节点身份。");
+            throw new AuthoringValidationException($"Debug navigation requires nonempty chapter and node identities.");
         var matches = new List<AssetPath>();
         bool containsPrimary = false;
         foreach (var candidate in context.chapters)
@@ -41,9 +41,9 @@ public static class PreviewSourceNavigator
             var snapshot = stories.Inspect(local);
             if (snapshot.draft.chapterId == chapter) matches.Add(local);
         }
-        if (matches.Count != 1) throw new AuthoringValidationException($"当前游戏无法唯一定位调试章节：{chapter}。请检查章节关联和未保存的身份修改。");
+        if (matches.Count != 1) throw new AuthoringValidationException($"The game cannot uniquely resolve debug chapter {chapter}. Check chapter references and unsaved identity changes.");
         AssetPath path = matches[0];
-        if (path.source != AssetSourceId.project) throw new AuthoringValidationException($"调试来源为只读插件内容：{path}。先创建可编辑的项目副本。");
+        if (path.source != AssetSourceId.project) throw new AuthoringValidationException($"The debug source is read-only plugin content: {path}. Create an editable project copy first.");
         return RequireNode(stories.Inspect(path), chapter, node);
     }
     private static StoryDocumentSnapshot RequireNode(
@@ -52,7 +52,7 @@ public static class PreviewSourceNavigator
         string node
     ) {
         if (snapshot.draft.chapterId != chapter || snapshot.draft.graph.document.FindNode(new(node)) is null)
-            throw new AuthoringValidationException($"调试节点已删除或不属于来源章节：{chapter}/{node}。");
+            throw new AuthoringValidationException($"The debug node was deleted or does not belong to its source chapter: {chapter}/{node}.");
         return snapshot;
     }
 }

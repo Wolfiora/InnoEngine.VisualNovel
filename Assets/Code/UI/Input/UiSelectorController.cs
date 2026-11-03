@@ -41,7 +41,7 @@ internal sealed class UiSelectorController
         UiElementDefinition definition,
         UiDataSource source,
         NovelValue? value
-    ) => (value is null ? source.Localize(definition.textId, definition.text) : Options(definition, source).FirstOrDefault(option => option.value.Equals(value))?.text ?? value.ToString()) + " ▾";
+    ) => (value is null ? source.Localize(definition.textId, definition.text) : Options(definition, source).FirstOrDefault(option => option.value.Equals(value))?.text ?? value.ToString()) + " v";
     internal void Open(
         UiElementInstance owner,
         UiDataSource source

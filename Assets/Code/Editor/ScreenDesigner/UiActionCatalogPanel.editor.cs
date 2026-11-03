@@ -15,7 +15,7 @@ using Inno.VisualNovel.Model.Values;
 namespace Inno.VisualNovel.Editor.ScreenDesigner;
 
 /// <summary>Edits neutral UI action forms using the shared resource documents and native History.</summary>
-[EditorPanel("inno.vn.ui-action-catalog", "VN 自定义 UI 动作 · Custom UI Actions", order: 465, menuPath: "Authoring")]
+[EditorPanel("inno.vn.ui-action-catalog", "VN Custom UI Actions", order: 465, defaultOpen: false, menuPath: "Authoring")]
 public sealed class UiActionCatalogPanel : EditorPanel, IEditorPanelReloadState
 {
     private readonly ResourceDocumentsModule m_documents;
@@ -37,9 +37,9 @@ public sealed class UiActionCatalogPanel : EditorPanel, IEditorPanelReloadState
     {
         m_fields.BeginFrame();
         try { Draw(); }
-        catch (Exception error) when (error is not OutOfMemoryException) { m_error = m_fields.Error(error); }
+        catch (Exception error) when (error is not OutOfMemoryException) { m_error = (error).Message; }
         finally { m_fields.EndFrame(); }
-        if (m_error.Length > 0) { EditorUiSession.current.widgets.Hint(m_error); if (ImGui.Button(m_fields.Label("清除提示"))) m_error = string.Empty; }
+        if (m_error.Length > 0) { EditorUiSession.current.widgets.Hint(m_error); if (ImGui.Button("Clear message")) m_error = string.Empty; }
     }
     /// <inheritdoc />
     public ReadOnlyMemory<byte> CaptureReloadState() { m_fields.Finish(); return m_documents.CaptureReload(); }
@@ -49,37 +49,37 @@ public sealed class UiActionCatalogPanel : EditorPanel, IEditorPanelReloadState
     protected override void OnDetach(EditorContext context) => m_fields.Finish();
     private void Draw()
     {
-        if (!m_toolbar.Draw<UiActionCatalogAsset>("动作目录", ".ivnuiactions", static () => new(), out var catalog) || catalog is null) return;
-        EditorUiSession.current.widgets.Hint(m_fields.Localize("动作目录保存类型化表单。实现由 C# 注册；在游戏设置关联目录，再在界面设计器选择动作。仅保存通过现有绑定写入的状态。"));
-        if (ImGui.Button(m_fields.Label("添加动作契约")))
+        if (!m_toolbar.Draw<UiActionCatalogAsset>("Action catalog", ".ivnuiactions", static () => new(), out var catalog) || catalog is null) return;
+        EditorUiSession.current.widgets.Hint("The action catalog stores typed forms. Register implementations in C#, link the catalog in game settings, then choose actions in Screen Designer. Only state written through existing bindings is saved.");
+        if (ImGui.Button("Add action contract"))
         {
-            m_fields.Finish(); m_documents.Edit<UiActionCatalogAsset>(m_toolbar.documentId, m_fields.Localize("添加 UI 动作"), candidate => UiActionCatalogEditService.Set(candidate, new() { id = "custom." + Guid.NewGuid().ToString("N"), title = "自定义动作" }));
+            m_fields.Finish(); m_documents.Edit<UiActionCatalogAsset>(m_toolbar.documentId, "Add UI action", candidate => UiActionCatalogEditService.Set(candidate, new() { id = "custom." + Guid.NewGuid().ToString("N"), title = "Custom action" }));
         }
         foreach (var original in catalog.definitions)
         {
             if (!ImGui.CollapsingHeader(original.title + " · " + original.id)) continue;
             var item = UiActionContract.Copy(original); string prefix = "action/" + original.id;
             string id = item.id, title = item.title, help = item.help, label = item.argument.label;
-            bool changed = m_fields.Text(prefix + "/id", m_fields.Localize("稳定 ID（custom. 开头）"), ref id); item.id = id;
-            changed |= m_fields.Text(prefix + "/title", m_fields.Localize("显示名"), ref title); item.title = title;
-            changed |= m_fields.MultilineText(prefix + "/help", m_fields.Localize("动作说明"), ref help); item.help = help;
-            changed |= m_fields.Text(prefix + "/label", m_fields.Localize("参数名称"), ref label); item.argument.label = label;
+            bool changed = m_fields.Text(prefix + "/id", "Stable ID (starts with custom.)", ref id); item.id = id;
+            changed |= m_fields.Text(prefix + "/title", "Display name", ref title); item.title = title;
+            changed |= m_fields.MultilineText(prefix + "/help", "Action description", ref help); item.help = help;
+            changed |= m_fields.Text(prefix + "/label", "Parameter name", ref label); item.argument.label = label;
             NovelValue value = item.argument.defaultValue;
             changed |= m_values.Draw(prefix + "/default", ref value, enumMembers: item.argument.members); item.argument.defaultValue = value;
             if (value.kind == NovelValueKind.Enum || value.kind == NovelValueKind.List && value.elementKind == NovelValueKind.Enum)
             {
                 if (item.argument.members.Length == 0) item.argument.members = [value.kind == NovelValueKind.Enum ? value.text : "Default"];
                 string members = string.Join(", ", item.argument.members);
-                if (m_fields.Text(prefix + "/members", m_fields.Localize("枚举成员（逗号分隔）"), ref members))
+                if (m_fields.Text(prefix + "/members", "Enum members (comma-separated)", ref members))
                 { item.argument.members = members.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries); changed = true; }
             }
             bool preview = item.capabilities.HasFlag(CommandCapabilities.Preview), rollback = item.capabilities.HasFlag(CommandCapabilities.Rollback), external = item.capabilities.HasFlag(CommandCapabilities.ExternalEffects);
-            changed |= m_fields.Toggle(prefix + "/preview", "允许受控预览", ref preview);
-            changed |= m_fields.Toggle(prefix + "/rollback", "允许跨越回滚", ref rollback);
-            changed |= m_fields.Toggle(prefix + "/external", "有外部副作用（建立屏障，预览禁用）", ref external);
+            changed |= m_fields.Toggle(prefix + "/preview", "Allow controlled preview", ref preview);
+            changed |= m_fields.Toggle(prefix + "/rollback", "Allow rollback across this action", ref rollback);
+            changed |= m_fields.Toggle(prefix + "/external", "External side effects (creates a barrier; disabled in preview)", ref external);
             item.capabilities = CommandCapabilities.Save | (preview ? CommandCapabilities.Preview : 0) | (rollback && !external ? CommandCapabilities.Rollback : 0) | (external ? CommandCapabilities.ExternalEffects : 0);
-            if (changed) m_documents.Edit<UiActionCatalogAsset>(m_toolbar.documentId, m_fields.Localize("编辑 UI 动作契约"), candidate => UiActionCatalogEditService.Set(candidate, item, original.id), m_fields.mergeKey);
-            if (ImGui.Button(m_fields.Caption("删除契约##" + prefix, m_fields.Localize("删除契约##") + prefix))) { m_fields.Finish(); m_documents.Edit<UiActionCatalogAsset>(m_toolbar.documentId, m_fields.Localize("删除 UI 动作契约"), candidate => UiActionCatalogEditService.Remove(candidate, original.id)); }
+            if (changed) m_documents.Edit<UiActionCatalogAsset>(m_toolbar.documentId, "Edit UI action contract", candidate => UiActionCatalogEditService.Set(candidate, item, original.id), m_fields.mergeKey);
+            if (ImGui.Button("Remove contract##" + prefix)) { m_fields.Finish(); m_documents.Edit<UiActionCatalogAsset>(m_toolbar.documentId, "Remove UI action contract", candidate => UiActionCatalogEditService.Remove(candidate, original.id)); }
         }
     }
 }

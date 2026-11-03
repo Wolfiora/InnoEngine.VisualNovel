@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Model.Collections;
 public sealed class CollectionAsset : AssetObject
 {
     /// <summary>Gets or sets the library title.</summary>
-    [SerializableProperty] public string title { get; set; } = "收藏与资料";
+    [SerializableProperty] public string title { get; set; } = "Collections";
     /// <summary>Gets or sets uniquely identified collection entries.</summary>
     [SerializableProperty] public CollectionEntry[] entries { get; set; } = [];
 }

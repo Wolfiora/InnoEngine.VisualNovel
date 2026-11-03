@@ -1,6 +1,6 @@
 namespace Inno.VisualNovel.Player.Ports;
 
-/// <summary>Owns generation-local voices while exposing only session-local tokens to audio policy.</summary>
+/// <summary>Owns generation-local voices while exposing only session-local tokens to audio policy; the session retires an output implementing IDisposable.</summary>
 public interface INovelAudioOutput
 {
     /// <summary>Starts a declared cue; implementations must release a partially created voice on failure.</summary>

@@ -18,19 +18,19 @@ internal sealed class ResourceLabelBatchView(StoryInspectorFields fields)
         Guid document,
         IReadOnlyCollection<Guid> selection
     ) {
-        if (selection.Count == 0 || !ImGui.CollapsingHeader(fields.Label("批量整理所选资源"))) return false;
-        EditorUiSession.current.widgets.Hint(fields.Localize("先移除标签，再添加标签；未启用的分类和说明保留各资源原值。一次应用是一项历史操作。"));
-        fields.Toggle("label-batch/group-override", "替换分类（空值表示未分类）", ref m_groupOverride);
-        if (m_groupOverride) fields.Text("label-batch/group", "新分类", ref m_group);
-        fields.MultilineText("label-batch/add", "添加标签（每行一个）", ref m_add);
-        fields.MultilineText("label-batch/remove", "移除标签（每行一个）", ref m_remove);
-        fields.Toggle("label-batch/description-override", "替换全部所选说明", ref m_descriptionOverride);
-        if (m_descriptionOverride) fields.MultilineText("label-batch/description", "新说明", ref m_description);
-        if (!ImGui.Button(fields.Label("应用批量整理"))) return false;
+        if (selection.Count == 0 || !ImGui.CollapsingHeader("Organize selected resources")) return false;
+        EditorUiSession.current.widgets.Hint("Tags are removed before additions. Categories and descriptions retain each resource's value unless explicitly replaced. Apply creates one History operation.");
+        fields.Toggle("label-batch/group-override", "Replace category (empty means ungrouped)", ref m_groupOverride);
+        if (m_groupOverride) fields.Text("label-batch/group", "New category", ref m_group);
+        fields.MultilineText("label-batch/add", "Add tags (one per line)", ref m_add);
+        fields.MultilineText("label-batch/remove", "Remove tags (one per line)", ref m_remove);
+        fields.Toggle("label-batch/description-override", "Replace descriptions for all selected resources", ref m_descriptionOverride);
+        if (m_descriptionOverride) fields.MultilineText("label-batch/description", "New description", ref m_description);
+        if (!ImGui.Button("Apply batch annotations")) return false;
         fields.Finish();
         var change = new ResourceLabelBatchChange { replaceGroup = m_groupOverride, group = m_group, addTags = ParagraphText.Lines(m_add), removeTags = ParagraphText.Lines(m_remove),
             replaceDescription = m_descriptionOverride, description = m_description };
-        documents.Edit<ResourceLabelCatalogAsset>(document, fields.Localize("批量整理资源"), candidate => ResourceLabelEditService.ApplyBatch(candidate, selection, change));
+        documents.Edit<ResourceLabelCatalogAsset>(document, "Organize resources", candidate => ResourceLabelEditService.ApplyBatch(candidate, selection, change));
         return true;
     }
 }

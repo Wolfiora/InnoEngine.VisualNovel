@@ -25,15 +25,10 @@ internal static class Program
     private static int Main(string[] args)
     {
         string root = Path.GetFullPath(args.Length is >= 1 and <= 7 ? args[0] : throw new ArgumentException("Supply the VN root and optional owned resource refresh flags."));
-        if (args.Length == 2 && args[1] == "--inventory-editor-text") { EditorTextInventory.Write(root); return 0; }
-        if (args.Length == 2 && args[1] == "--review-editor-english") { EditorEnglishText.Review(root); return 0; }
-        if (args.Length == 2 && args[1] == "--wire-editor-text") { EditorTextSourceWiring.Apply(root); return 0; }
-        if (args.Length == 2 && args[1] == "--wire-authoring-diagnostics") { AuthoringDiagnosticWiring.Apply(root); return 0; }
-        if (args.Skip(1).Any(static option => option is not ("--refresh-sample" or "--refresh-motions" or "--refresh-themes" or "--refresh-characters" or "--refresh-stages" or "--refresh-effects" or "--refresh-editor-text"))) throw new ArgumentException("Unknown resource writer option.");
-        bool editorTextOnly = args.Length == 2 && args[1] == "--refresh-editor-text";
+        if (args.Skip(1).Any(static option => option is not ("--refresh-sample" or "--refresh-motions" or "--refresh-themes" or "--refresh-characters" or "--refresh-stages" or "--refresh-effects"))) throw new ArgumentException("Unknown resource writer option.");
         bool refreshMotions = args.Contains("--refresh-motions", StringComparer.Ordinal);
         string motionBackup = Path.Combine(root, "artifacts", "SourceBackups", "MotionCurves-" + Guid.NewGuid().ToString("N"));
-        if (!editorTextOnly) { OriginalAudioWriter.WriteSources(root); OriginalParticleSprites.Write(root); OriginalVisualLibrary.WriteSources(root); }
+        OriginalAudioWriter.WriteSources(root); OriginalParticleSprites.Write(root); OriginalVisualLibrary.WriteSources(root);
         var identities = new IdentityAllocator();
         using var identityScope = identities.EnterScope();
         using var modules = new ModuleHost(new ModuleHostOptions { catalogSource = new DotNetAssemblyCatalogSource(typeof(Program).Assembly,
@@ -55,18 +50,6 @@ internal static class Program
             AssetPipelineOptions.Create(Path.Combine(root, "Assets"), Path.Combine(root, "Library", "BuiltInResourceWriter")) with
             { enableFileSystemWatcher = false, deferUnavailableExtensions = true, sourcePolicy = new(null, ["Code", "Documentation", "~Samples"], null, null) })) {
             using var scope = AssetExecutionContext.EnterScope(assets);
-            if (args.Contains("--refresh-editor-text", StringComparer.Ordinal))
-            {
-                var writer = new OwnedSourceRefresh(root, "BuiltIn/Editor", true);
-                var table = EditorEnglishText.Create(root);
-                const string path = "BuiltIn/Editor/EditorText.ivnlocale";
-                writer.Save(path, table);
-                var loaded = Assets.Assets.Load<Inno.VisualNovel.Model.Localization.LocalizationTableAsset>(AssetPath.Project(path));
-                if (loaded.isMissing || loaded.entries.Length != table.entries.Length) throw new InvalidOperationException("Native editor language resource did not reload completely.");
-                _ = new Inno.VisualNovel.Editor.Localization.EditorTextCatalog(loaded, "en");
-                Console.WriteLine("Native editor text imported and reloaded: " + loaded.entries.Length + " reviewed source/English pairs.");
-                if (editorTextOnly) return 0;
-            }
             int preparedLeaves = 0;
             foreach (string leaf in Directory.EnumerateFiles(Path.Combine(root, "Assets", "BuiltIn"), "*", SearchOption.AllDirectories)
                 .Where(static path => Path.GetExtension(path).ToLowerInvariant() is ".png" or ".wav" or ".otf").OrderBy(static path => path, StringComparer.Ordinal))

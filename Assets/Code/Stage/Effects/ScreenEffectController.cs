@@ -21,6 +21,17 @@ public sealed class ScreenEffectController
             VisualEffectRules.Validate(item.screen); return item.screen.Copy();
         }, StringComparer.Ordinal);
     }
+    /// <summary>Freezes one native component's resolved parameters without manufacturing an asset or a second scene object.</summary>
+    /// <param name="resourceId">The assigned preset's stable resource identity.</param>
+    /// <param name="parameters">Validated component-owned parameters.</param>
+    public ScreenEffectController(
+        string resourceId,
+        ScreenEffectDefinition parameters
+    ) {
+        if (string.IsNullOrWhiteSpace(resourceId)) throw new ArgumentException("A screen effect requires a resource identity.", nameof(resourceId));
+        VisualEffectRules.Validate(parameters);
+        m_presets = new Dictionary<string, ScreenEffectDefinition>(StringComparer.Ordinal) { [resourceId] = parameters.Copy() };
+    }
     /// <summary>Applies one explicit instance lifecycle action without reading or changing narrative state.</summary>
     /// <param name="request">The typed authored operation.</param>
     public void Apply(ScreenEffectNode request)
@@ -81,7 +92,13 @@ public sealed class ScreenEffectController
         return frames.AsReadOnly();
     }
 
-    private static ScreenEffectDefinition Parameters(
+    /// <summary>Resolves supported timeline channels without mutating the authored preset.</summary>
+    /// <param name="target">The exact track target identity.</param>
+    /// <param name="preset">The source parameter declaration.</param>
+    /// <param name="samples">Optional sampled channels from the shared timeline evaluator.</param>
+    /// <param name="multiplier">Receives the separate normalized blend-strength channel.</param>
+    /// <returns>Resolved parameters; callers must not mutate the returned source when there are no matching channels.</returns>
+    public static ScreenEffectDefinition Parameters(
         string target,
         ScreenEffectDefinition preset,
         IReadOnlyDictionary<(string target, PerformanceProperty property), double>? samples,

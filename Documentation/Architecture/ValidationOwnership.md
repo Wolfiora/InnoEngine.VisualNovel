@@ -12,7 +12,7 @@
 
 此工具的成功表示正式脚本与插件分发逻辑通过，不能证明 Windows 成品或设备行为。公开 API 的缺口仍按决策记录处理。
 
-无界面游戏构建使用显式复制到 `artifacts/SupportPacks` 的既有 Windows Support Pack；BuildPipeline 不配置源码 provisioner。准备 Scene 时使用公开 SceneWorld、GameScene、SceneAsset.Capture 和官方场景导入器；游戏入口仍是原生 GameObject 上的 NovelPlayerComponent。构建操作不会加载该场景、启动 Player、创建窗口或打开设备。
+无界面游戏构建使用显式复制到 `artifacts/SupportPacks` 的既有 Windows Support Pack；BuildPipeline 不配置源码 provisioner。准备 Scene 时使用公开 SceneWorld、GameScene、SceneAsset.Capture 和官方场景导入器；游戏入口是原生 Scene 上的 NovelSceneSystem。构建操作不会加载该场景、启动 Player、创建窗口或打开设备。
 
 场景导入程序集没有可供工具引用的公开标记类型，验证宿主通过标准 AssemblyLoadContext 从选定 SDK 路径显式装载该程序集，并交由官方 DotNetAssemblyCatalogSource 发现。工具没有扫描目录或调用内部类型/方法。这仅用于 SDK 宿主的元数据组成，不进入生产脚本。
 

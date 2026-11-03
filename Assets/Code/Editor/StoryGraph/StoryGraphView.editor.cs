@@ -22,16 +22,14 @@ internal sealed class StoryGraphView
     private string m_primary = string.Empty;
     private Guid m_document;
     private long m_revision = -1;
-    private string m_language = string.Empty;
-    private readonly EditorTextView m_text;
     private readonly StoryGraphDebugView m_debugView;
     internal GraphCanvasState navigation => m_navigation;
     internal void Suspend() { m_pointer.Cancel(); m_overview.Cancel(); }
 
-    internal StoryGraphView(EditorTextView text)
+    internal StoryGraphView()
     {
-        m_text = text;
-        m_debugView = new(text);
+
+        m_debugView = new();
         m_navigation.SetViewport(new(35, 160), 0.65f);
         m_pointer = new(m_navigation);
     }
@@ -54,23 +52,23 @@ internal sealed class StoryGraphView
             m_primary = selected;
         }
         long revision = documents.GetRevision(documents.activeDocumentId);
-        if (m_document != documents.activeDocumentId || m_revision != revision || m_language != m_text.language)
+        if (m_document != documents.activeDocumentId || m_revision != revision)
         {
             m_pointer.Cancel();
             var catalog = new StoryNodeCatalog(documents.codec);
-            m_layout.SetNodes(draft.graph.document.nodes.Select(node => Describe(node, catalog, m_text)));
+            m_layout.SetNodes(draft.graph.document.nodes.Select(node => Describe(node, catalog)));
             m_overview.SetNodes(m_layout.nodes);
-            m_document = documents.activeDocumentId; m_revision = revision; m_language = m_text.language;
+            m_document = documents.activeDocumentId; m_revision = revision;
         }
-        bool centerAll = ImGui.SmallButton(m_text.Label("居中全部节点"));
-        ImGui.SameLine(); bool centerSelected = ImGui.SmallButton(m_text.Label("居中所选节点"));
-        ImGui.SameLine(); if (ImGui.Checkbox(m_text.Label("导航缩略图"), ref m_showOverview)) m_overview.Cancel();
+        bool centerAll = ImGui.SmallButton("Center all nodes");
+        ImGui.SameLine(); bool centerSelected = ImGui.SmallButton("Center selected nodes");
+        ImGui.SameLine(); if (ImGui.Checkbox("Navigation overview", ref m_showOverview)) m_overview.Cancel();
         string active = execution?.chapter == draft.chapterId ? execution.node : string.Empty;
         bool centerExecution = false;
-        if (active.Length > 0) { ImGui.SameLine(); centerExecution = ImGui.SmallButton(m_text.Label("居中执行位置")); }
+        if (active.Length > 0) { ImGui.SameLine(); centerExecution = ImGui.SmallButton("Center execution position"); }
         var breakpoints = (debugger?.breakpoints ?? []).Where(point => point.chapter == draft.chapterId)
             .ToDictionary(static point => point.node, static point => point.conditional, StringComparer.Ordinal);
-        if (breakpoints.Count > 0) ImGui.Text(m_text.Localize("圆点：运行会话断点；方框：条件断点。"));
+        if (breakpoints.Count > 0) ImGui.Text("Circle: session breakpoint; square: conditional breakpoint.");
         Vector2 origin = ImGui.GetCursorScreenPosition();
         Vector2 size = Vector2.Max(Vector2.Zero, ImGui.GetContentRegionAvailable());
         if (centerAll || centerSelected) { m_pointer.Cancel(); m_overview.Cancel(); m_overview.CenterSelection(m_navigation, m_layout.nodes, size, centerSelected); }
@@ -114,9 +112,9 @@ internal sealed class StoryGraphView
             select(m_primary);
         }
         if (result.movedNodes is { } positions)
-            documents.Edit(documents.activeDocumentId, m_text.Localize("移动剧情节点"), state => documents.edits.Move(state, positions));
+            documents.Edit(documents.activeDocumentId, "Move story node", state => documents.edits.Move(state, positions));
         if (result.output is GraphEndpoint output && result.input is GraphEndpoint destination)
-            documents.Edit(documents.activeDocumentId, m_text.Localize("连接剧情节点"), state => documents.edits.Connect(state, output, destination.nodeId));
+            documents.Edit(documents.activeDocumentId, "Connect story nodes", state => documents.edits.Connect(state, output, destination.nodeId));
         var draw = ImGui.GetDrawList();
         draw.PushClip(origin, origin + size, true);
         try
@@ -161,8 +159,7 @@ internal sealed class StoryGraphView
 
     private static GraphCanvasNode Describe(
         GraphNodeRecord node,
-        StoryNodeCatalog catalog,
-        EditorTextView text
+        StoryNodeCatalog catalog
     ) {
         IReadOnlyList<GraphPortDefinition> definitions = catalog.TryResolve(node.definitionId, out GraphNodeDefinition? definition) && definition is not null
             ? definition.GetPorts(node) : [];
@@ -172,10 +169,10 @@ internal sealed class StoryGraphView
         {
             bool input = port.direction == GraphPortDirection.Input;
             float y = 58 + (input ? 0 : outputs++) * 26;
-            ports.Add(new(new(node.id, port.id), port.direction, new(input ? 0 : 230, y), text.Localize(port.displayName),
+            ports.Add(new(new(node.id, port.id), port.direction, new(input ? 0 : 230, y), port.displayName,
                 labelBounds: (new(input ? 0 : 105, y - 12), new(input ? 105 : 230, y + 12))));
         }
         return new(node.id, node.position, new(230, MathF.Max(100, 72 + outputs * 26)), 34,
-            text.Localize(definition?.displayName ?? node.definitionId) + " · " + node.id.value[..Math.Min(8, node.id.value.Length)], ports);
+            definition?.displayName ?? node.definitionId + " · " + node.id.value[..Math.Min(8, node.id.value.Length)], ports);
     }
 }

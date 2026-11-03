@@ -26,9 +26,9 @@ internal sealed class StoryClipboardVariables(StoryNodeDataCodec codec)
         var declarations = source.variables.ToDictionary(static item => item.id, StringComparer.Ordinal);
         foreach (var item in map)
             if (!declarations.ContainsKey(item.Key) || string.IsNullOrWhiteSpace(item.Value) || item.Value.Length > 256 || item.Value.IndexOfAny(['{', '}', '[', ']']) >= 0)
-                throw new AuthoringValidationException($"复制变量映射的来源或目标身份无效：{item.Key}");
+                throw new AuthoringValidationException($"The copied variable mapping has an invalid source or target identity: {item.Key}");
         string[] finalIds = source.variables.Select(variable => Map(variable.id)).ToArray();
-        if (finalIds.Distinct(StringComparer.Ordinal).Count() != finalIds.Length) throw new AuthoringValidationException($"多个源变量不能隐式合并为同一目标；请分别选择目标或导入为新变量。");
+        if (finalIds.Distinct(StringComparer.Ordinal).Count() != finalIds.Length) throw new AuthoringValidationException($"Multiple source variables cannot be merged implicitly. Select separate destinations or import them as new variables.");
         var candidates = source.variables.Select(variable =>
         {
             if (!map.TryGetValue(variable.id, out string? id)) return VariableValueRules.Copy(variable);
@@ -36,7 +36,7 @@ internal sealed class StoryClipboardVariables(StoryNodeDataCodec codec)
             {
                 VariableValueRules.Validate(target, variable.initialValue);
                 bool enumeration = variable.initialValue.kind == NovelValueKind.Enum || variable.initialValue.kind == NovelValueKind.List && variable.initialValue.elementKind == NovelValueKind.Enum;
-                if (enumeration && variable.members.Any(member => !target.members.Contains(member, StringComparer.Ordinal))) throw new AuthoringValidationException($"目标枚举没有包含复制变量的全部成员：{id}");
+                if (enumeration && variable.members.Any(member => !target.members.Contains(member, StringComparer.Ordinal))) throw new AuthoringValidationException($"The destination enum does not contain every copied member: {id}");
                 return VariableValueRules.Copy(target);
             }
             var created = VariableValueRules.Copy(variable); created.id = id; return created;
@@ -44,7 +44,7 @@ internal sealed class StoryClipboardVariables(StoryNodeDataCodec codec)
         var catalog = new StoryNodeCatalog(codec);
         foreach (var node in source.graph.document.nodes)
         {
-            if (!catalog.TryResolve(node.definitionId, out _)) throw new AuthoringValidationException($"缺失扩展的变量引用无法安全改写；请先恢复该扩展：{node.id.value}");
+            if (!catalog.TryResolve(node.definitionId, out _)) throw new AuthoringValidationException($"Variable references in a missing extension cannot be rewritten safely. Restore the extension first: {node.id.value}");
             switch (node.definitionId)
             {
                 case StoryNodeIds.log:
@@ -78,12 +78,12 @@ internal sealed class StoryClipboardVariables(StoryNodeDataCodec codec)
             {
                 if (token.variable && map.TryGetValue(token.value, out string? replacement))
                 {
-                    if (result.Length > 1_000_000 - replacement.Length - 2) throw new AuthoringValidationException($"映射后的文字超过字符预算。");
+                    if (result.Length > 1_000_000 - replacement.Length - 2) throw new AuthoringValidationException($"The remapped text exceeds the character budget.");
                     result.Append('{').Append(replacement).Append('}');
                 }
                 else
                 {
-                    if (result.Length > 1_000_000 - token.length) throw new AuthoringValidationException($"映射后的文字超过字符预算。");
+                    if (result.Length > 1_000_000 - token.length) throw new AuthoringValidationException($"The remapped text exceeds the character budget.");
                     result.Append(text, token.start, token.length);
                 }
             }
@@ -93,7 +93,7 @@ internal sealed class StoryClipboardVariables(StoryNodeDataCodec codec)
             ExpressionDocument expression,
             int depth = 0
         ) {
-            if (depth >= 64) throw new AuthoringValidationException($"映射表达式超过深度预算。");
+            if (depth >= 64) throw new AuthoringValidationException($"The remapped expression exceeds the nesting-depth budget.");
             if (expression.operation == ExpressionOperation.Variable) expression.variableId = Map(expression.variableId);
             foreach (var operand in expression.operands) Expression(operand, depth + 1);
         }

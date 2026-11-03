@@ -21,7 +21,7 @@ internal static class SelectorSearchContracts
         Check(Options(filtered).Single().id == "select/option/charlie" && source.value.text == "a", "Filtering changed the binding or failed case-insensitive label matching.");
         Check(!document.BuildFrame(source, false).items.Any(static item => item.id.StartsWith("select/", StringComparison.Ordinal)), "Save capture included transient search or option overlays.");
         var snapshot = native.Deserialize<UiFrameSnapshot>(native.Serialize(UiFrameSnapshot.Capture(document.BuildFrame(source, false))));
-        Check(snapshot.items.Length == 1 && snapshot.items[0].text == "Alpha ▾", "A native capture retained the temporary query or option rows.");
+        Check(snapshot.items.Length == 1 && snapshot.items[0].text == "Alpha v", "A native capture retained the temporary query or option rows.");
         document.HandleInput(new() { composing = true, text = ["ignored"], cancel = true, confirm = true }, source);
         Check(document.popupOpen && Options(document.BuildFrame(source)).Single().id == "select/option/charlie", "Composition changed the query or confirmed a value.");
         document.HandleInput(new() { text = [" impossible"], space = true, confirm = true }, source);

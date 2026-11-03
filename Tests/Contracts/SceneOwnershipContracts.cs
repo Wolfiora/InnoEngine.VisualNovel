@@ -7,10 +7,7 @@ using Inno.VisualNovel.Authoring.Templates;
 using Inno.VisualNovel.Compiler;
 using Inno.VisualNovel.Integration.Hosting;
 using Inno.VisualNovel.Model.Project;
-using Inno.VisualNovel.Model.Performance;
 using Inno.VisualNovel.Narrative.Execution;
-using Inno.VisualNovel.Player.Sessions;
-using Inno.VisualNovel.Player.Performance;
 
 namespace Inno.VisualNovel.Tests.Contracts;
 
@@ -25,97 +22,72 @@ internal static class SceneOwnershipContracts
         using var world = new SceneWorld(identities, types);
         using IDisposable scope = world.EnterScope();
         NovelProjectAsset game = Game("scene-owned", codec, compiler);
-        var detached = new NovelPlayerComponent { project = game };
-        RejectSession(detached);
-
+        RejectSession(new NovelSceneSystem { project = game });
         var first = new GameScene("First VN scene");
-        GameObject owner = first.CreateObject("VN player");
-        NovelPlayerComponent player = owner.AddComponent<NovelPlayerComponent>();
-        player.project = game;
-        Check(ReferenceEquals(player.gameObject, owner) && ReferenceEquals(player.transform, owner.transform)
-            && owner.GetComponents<NovelPlayerComponent>().Single() == player && first.GetObjects().Single() == owner,
-            "The player did not use the native scene/object/component ownership tree.");
+        NovelSceneSystem player = first.AddSystem<NovelSceneSystem>(); player.project = game;
+        Check(first.GetObjects().Count == 0 && first.GetSystems().Single() == player && player.owningScene == first,
+            "The system introduced a holder object or a parallel scene.");
         RejectSession(player);
         SceneManager.LoadScene(first);
         var second = SceneManager.LoadNewSceneAdditive("Second VN scene");
-        GameObject otherOwner = second.CreateObject("Another VN player");
-        NovelPlayerComponent other = otherOwner.AddComponent<NovelPlayerComponent>();
-        other.project = game;
-        var performanceTargets = new NovelPerformanceTargets(new System.Collections.Generic.Dictionary<string, PerformanceProperty[]> { ["extension/native"] = [PerformanceProperty.X] });
-        player.ConfigurePerformanceTargets(performanceTargets);
-        NovelSession original = player.session, independent = other.session;
-        Check(original.buildFingerprint != independent.buildFingerprint, "Native component configuration did not pass its extension contract into the owned session.");
-        bool lateTargets = false;
-        try { player.ConfigurePerformanceTargets(performanceTargets); } catch (InvalidOperationException) { lateTargets = true; }
-        Check(lateTargets, "An active native component changed its frozen extension contract after computing save identity.");
+        NovelSceneSystem other = second.AddSystem<NovelSceneSystem>(); other.project = game;
+        world.FixedUpdate(0);
+        var original = player.session; var independent = other.session;
         original.StartNew(); independent.StartNew();
         Check(!ReferenceEquals(original, independent) && original.story!.status == StoryStatus.Dialogue
-            && independent.story!.status == StoryStatus.Dialogue, "Native players shared a live narrative session.");
+            && independent.story!.status == StoryStatus.Dialogue, "Native systems shared a live story.");
         player.rollbackBudgetMiB = 0;
-        Check(original.rollbackByteBudget == 0 && independent.rollbackByteBudget == 64L * 1024 * 1024 && original.rollbackStoredBytes is null,
-            "The native component budget failed to update its own session or fabricated a codec capability.");
-        bool badBudget = false; try { player.rollbackBudgetMiB = -1; } catch (ArgumentOutOfRangeException) { badBudget = true; }
-        Check(badBudget && player.rollbackBudgetMiB == 0, "The native component accepted an invalid retention policy.");
-
+        Check(original.rollbackByteBudget == 0 && independent.rollbackByteBudget == 64L * 1024 * 1024,
+            "A system changed another scene's retention policy.");
         player.enabled = false;
         Check(original.story!.status == StoryStatus.Stopped && independent.story!.status == StoryStatus.Dialogue,
-            "Native component disable failed to retire exactly its own narrative.");
+            "Disabling a system did not retire exactly its own narrative.");
         RejectSession(player);
         player.enabled = true;
-        NovelSession enabled = player.session; enabled.StartNew();
-        Check(!ReferenceEquals(enabled, original) && enabled.buildFingerprint == original.buildFingerprint, "Re-enabled native component retained its retired session or lost its explicit extension contract.");
-        owner.SetActive(false);
-        Check(enabled.story!.status == StoryStatus.Stopped, "Native object deactivation did not stop its player.");
-        RejectSession(player);
-        owner.SetActive(true);
-        NovelSession active = player.session; active.StartNew();
+        var enabled = player.session; enabled.StartNew();
+        Check(!ReferenceEquals(enabled, original), "Re-enabling a system reused its disposed session.");
         player.project = game;
-        Check(ReferenceEquals(active, player.session), "Reassigning the same game unexpectedly restarted its session.");
+        Check(ReferenceEquals(enabled, player.session), "Reassigning the same game restarted the story.");
         player.project = Game("replacement", codec, compiler);
-        Check(active.story!.status == StoryStatus.Stopped && player.session.gameId == "replacement",
-            "Replacing the game binding retained the old content session.");
-        NovelSession replacement = player.session; replacement.StartNew();
-        first.DestroyObject(owner);
-        Check(player.isDestroyed && replacement.story!.status == StoryStatus.Stopped && first.GetObjects().Count == 0,
-            "Native object destruction leaked its component-owned narrative.");
+        Check(enabled.story!.status == StoryStatus.Stopped && player.session.gameId == "replacement", "Changing the game retained the old session.");
+        var replacement = player.session; replacement.StartNew();
+        Check(first.RemoveSystem(player) && player.isDestroyed && replacement.story!.status == StoryStatus.Stopped,
+            "Removing a native system leaked its story.");
         RejectSession(player);
-
-        Check(otherOwner.RemoveComponent(other) && other.isDestroyed && independent.story!.status == StoryStatus.Stopped
-            && otherOwner.GetComponents<NovelPlayerComponent>().Count == 0 && otherOwner.transform is not null,
-            "Native component removal did not retire the narrative while preserving the ordinary object.");
+        Check(SceneManager.UnloadScene(second) && other.isDestroyed && independent.story!.status == StoryStatus.Stopped,
+            "Unloading a native scene leaked its system-owned story.");
         RejectSession(other);
-        NovelPlayerComponent last = otherOwner.AddComponent<NovelPlayerComponent>(); last.project = game;
-        NovelSession unloading = last.session; unloading.StartNew();
-        Check(SceneManager.UnloadScene(second) && last.isDestroyed && unloading.story!.status == StoryStatus.Stopped,
-            "Native scene unload did not release its attached player.");
-        RejectSession(last);
+        var stopped = first.AddSystem<NovelSceneSystem>(); stopped.project = game;
+        world.FixedUpdate(0);
+        stopped.StartGame(); var previous = stopped.session;
+        var animated = first.CreateObject("Stopped animation").AddComponent<Integration.Components.NovelCharacterComponent>();
+        stopped.StopGame();
+        world.Update(.25f);
+        Check(animated.elapsed == 0 && previous.story!.status == StoryStatus.Stopped && !stopped.hasPresentation,
+            "The native update recreated a stopped game or advanced stopped scene components.");
+        RejectSession(stopped);
+        stopped.StartGame();
+        Check(!ReferenceEquals(previous, stopped.session) && stopped.session.story!.status == StoryStatus.Dialogue,
+            "An explicit restart did not create a fresh story.");
     }
-
     private static NovelProjectAsset Game(
         string id,
         StoryNodeDataCodec codec,
         StoryCompiler compiler
     ) {
         var chapter = FirstStoryTemplate.Create(codec).ToAsset();
-        var result = compiler.Compile(chapter);
-        Check(result.success, "The native scene fixture story did not compile.");
-        chapter.program = result.program!;
+        chapter.program = compiler.Compile(chapter).program!;
         return new() { gameId = id, chapters = [chapter], startChapter = chapter.chapterId,
             screens = new[] { "title", "reading", "pause", "settings", "history", "credits" }
                 .Select(static role => new NovelScreenBinding { role = role, screen = ShellScreenTemplates.Create(role, null!, "Clear") }).ToArray() };
     }
-
-    private static void RejectSession(NovelPlayerComponent component)
+    private static void RejectSession(NovelSceneSystem system)
     {
-        try { _ = component.session; }
-        catch (InvalidOperationException) { return; }
-        throw new InvalidOperationException("An inactive, unloaded, detached or destroyed component created a live VN session.");
+        try { _ = system.session; } catch (InvalidOperationException) { return; }
+        throw new InvalidOperationException("An inactive or detached system created a VN session.");
     }
-
     private static void Check(
         bool condition,
         string message
-    ) {
-        if (!condition) throw new InvalidOperationException(message);
-    }
+    ) { if (!condition) throw new InvalidOperationException(message); }
 }

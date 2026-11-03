@@ -21,7 +21,7 @@ public static class StoryExchangeFiles
     /// <returns>The exchange text for a separate review operation.</returns>
     public static string Read(string path)
     {
-        if (new FileInfo(path).Length > 32 * 1024 * 1024) throw new AuthoringValidationException($"剧本文件超过 32 MiB 读取预算。");
+        if (new FileInfo(path).Length > 32 * 1024 * 1024) throw new AuthoringValidationException($"The script file exceeds the 32 MiB read budget.");
         return File.ReadAllText(path, new UTF8Encoding(false, true));
     }
     /// <summary>Exports a finite proofreading draft retaining original nodes and explicit branch targets.</summary>
@@ -39,8 +39,8 @@ public static class StoryExchangeFiles
         CharacterAsset[]? characters = null
     ) {
         string root = Path.GetFullPath(projectDirectory), directory = Path.GetFullPath(Path.Combine(root, "artifacts", "Exports"));
-        if (!directory.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new AuthoringValidationException($"阅读稿导出必须位于当前项目内。");
-        var output = new StringBuilder(); output.AppendLine(draft.title).AppendLine("阅读稿：每个节点只列一次；目标是稳定节点 ID，循环不展开。变量保留作者占位符。");
+        if (!directory.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new AuthoringValidationException($"The reading-script export must remain inside the current project.");
+        var output = new StringBuilder(); output.AppendLine(draft.title).AppendLine("Reading draft: each node appears once. Targets are stable node IDs; loops are not expanded. Authored variable placeholders are retained.");
         foreach (var row in ScriptProjectionBuilder.Build(draft))
         {
             var node = draft.graph.document.FindNode(new(row.nodeId))!;
@@ -48,8 +48,8 @@ public static class StoryExchangeFiles
             if (node.definitionId == StoryNodeIds.dialogue)
             {
                 var line = codec.Read<DialogueNode>(node); string speaker = line.speaker.Length > 0 ? line.speaker : characters?.FirstOrDefault(character => character.resourceId == line.characterId)?.displayName ?? "";
-                output.Append(speaker.Length > 0 ? speaker + "：" : "旁白：").AppendLine(line.text).Append("文本 ID：").AppendLine(line.textId);
-                if (line.voiceCueId.Length > 0) output.Append("语音：").AppendLine(line.voiceCueId);
+                output.Append(speaker.Length > 0 ? speaker + "：" : "Narration: ").AppendLine(line.text).Append("Text ID: ").AppendLine(line.textId);
+                if (line.voiceCueId.Length > 0) output.Append("Voice: ").AppendLine(line.voiceCueId);
             }
             else if (node.definitionId == StoryNodeIds.choice)
             {

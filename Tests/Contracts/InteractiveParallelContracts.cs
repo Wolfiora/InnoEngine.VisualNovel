@@ -122,7 +122,7 @@ internal static class InteractiveParallelContracts
         var competing = edits.Add(fixture.draft, "opening", StoryNodeIds.dialogue, new DialogueNode { textId = "competing", text = "Other" }, new(100, 500));
         edits.Insert(fixture.draft, second.id, competing);
         var rejected = compiler.Compile(fixture.draft.ToAsset());
-        Check(!rejected.success && rejected.diagnostics.Any(static issue => issue.code == "VN_PARALLEL_SCOPE" && issue.message.Contains("焦点", StringComparison.Ordinal)),
+        Check(!rejected.success && rejected.diagnostics.Any(static issue => issue.code == "VN_PARALLEL_SCOPE" && issue.message.Contains("focus", StringComparison.Ordinal)),
             "The production compiler accepted two interactive branches.");
         var valid = Create(codec); var game = Project(valid.draft, compiler);
         var forged = Model.Programs.StoryProgramCopy.Copy(game.chapters[0].program!);

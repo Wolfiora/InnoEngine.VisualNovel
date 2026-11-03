@@ -47,7 +47,7 @@ public sealed class GlobalProgressStore
     /// <returns>Null for a first run; corrupt or foreign packets throw without changing a session.</returns>
     public async ValueTask<GlobalProgressState?> ReadProgressAsync(CancellationToken cancellationToken = default)
     {
-        byte[]? bytes = await m_storage.ReadAsync(new(m_root + "/progress"), cancellationToken);
+        byte[]? bytes = await m_storage.ReadAsync(new(m_root + "/progress"), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         if (bytes is null) return null;
         if (bytes.Length > 64 * 1024 * 1024) throw new InvalidOperationException("Global progress exceeds its storage budget.");
@@ -82,9 +82,9 @@ public sealed class GlobalProgressStore
 
     internal async ValueTask<(byte[]? progress, byte[]? preferences)> ReadProfileBytesAsync(CancellationToken cancellationToken)
     {
-        byte[]? global = await m_storage.ReadAsync(new(m_root + "/progress"), cancellationToken);
+        byte[]? global = await m_storage.ReadAsync(new(m_root + "/progress"), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        byte[]? settings = await m_storage.ReadAsync(new(m_root + "/preferences"), cancellationToken);
+        byte[]? settings = await m_storage.ReadAsync(new(m_root + "/preferences"), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         return (global, settings);
     }
@@ -109,11 +109,11 @@ public sealed class GlobalProgressStore
         byte[] preferences,
         CancellationToken cancellationToken
     ) {
-        await m_gate.WaitAsync(cancellationToken);
+        await m_gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await m_storage.WriteAsync(new(m_root + "/progress"), progress, cancellationToken);
-            await m_storage.WriteAsync(new(m_root + "/preferences"), preferences, cancellationToken);
+            await m_storage.WriteAsync(new(m_root + "/progress"), progress, cancellationToken).ConfigureAwait(false);
+            await m_storage.WriteAsync(new(m_root + "/preferences"), preferences, cancellationToken).ConfigureAwait(false);
         }
         finally { m_gate.Release(); }
     }
@@ -122,7 +122,7 @@ public sealed class GlobalProgressStore
     /// <returns>Null for a first run; otherwise validated independent settings.</returns>
     public async ValueTask<PlayerPreferences?> ReadPreferencesAsync(CancellationToken cancellationToken = default)
     {
-        byte[]? bytes = await m_storage.ReadAsync(new(m_root + "/preferences"), cancellationToken);
+        byte[]? bytes = await m_storage.ReadAsync(new(m_root + "/preferences"), cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         if (bytes is null) return null;
         if (bytes.Length > 1024 * 1024) throw new InvalidOperationException("Player preferences exceed their storage budget.");
@@ -136,8 +136,8 @@ public sealed class GlobalProgressStore
         CancellationToken cancellationToken
     ) {
         if (bytes.Length > 64 * 1024 * 1024) throw new InvalidOperationException("Global data exceeds its storage budget.");
-        await m_gate.WaitAsync(cancellationToken);
-        try { await m_storage.WriteAsync(new(m_root + "/" + role), bytes, cancellationToken); }
+        await m_gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { await m_storage.WriteAsync(new(m_root + "/" + role), bytes, cancellationToken).ConfigureAwait(false); }
         finally { m_gate.Release(); }
     }
 }

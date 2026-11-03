@@ -52,7 +52,7 @@ public static class UiMotionSampling
         float x = bounds.x + bounds.width * pivot.x, y = bounds.y + bounds.height * pivot.y;
         return Matrix.CreateTranslation(x + pose.x, y + pose.y, 0) * Matrix.CreateScale(pose.scale, pose.scale, 1) * Matrix.CreateTranslation(-x, -y, 0);
     }
-    /// <summary>Projects an axis-aligned rectangle through the supported positive uniform scale and translation.</summary>
+    /// <summary>Computes the axis-aligned extent of all four corners after a finite affine transform, including rotation and reflection.</summary>
     /// <param name="bounds">The original rectangle.</param>
     /// <param name="transform">The composed engine presentation matrix.</param>
     /// <returns>A finite projected rectangle.</returns>
@@ -60,9 +60,12 @@ public static class UiMotionSampling
         Rect bounds,
         Matrix transform
     ) {
-        Vector2 first = Vector2.Transform(new(bounds.x, bounds.y), transform), last = Vector2.Transform(new(bounds.x + bounds.width, bounds.y + bounds.height), transform);
-        if (!float.IsFinite(first.x) || !float.IsFinite(first.y) || !float.IsFinite(last.x) || !float.IsFinite(last.y) || Math.Abs(last.x - first.x) > 1e8 || Math.Abs(last.y - first.y) > 1e8)
+        Vector2 a = Vector2.Transform(new(bounds.x, bounds.y), transform), b = Vector2.Transform(new(bounds.x + bounds.width, bounds.y), transform),
+            c = Vector2.Transform(new(bounds.x + bounds.width, bounds.y + bounds.height), transform), d = Vector2.Transform(new(bounds.x, bounds.y + bounds.height), transform);
+        float left = Math.Min(Math.Min(a.x, b.x), Math.Min(c.x, d.x)), right = Math.Max(Math.Max(a.x, b.x), Math.Max(c.x, d.x));
+        float top = Math.Min(Math.Min(a.y, b.y), Math.Min(c.y, d.y)), bottom = Math.Max(Math.Max(a.y, b.y), Math.Max(c.y, d.y));
+        if (!float.IsFinite(left) || !float.IsFinite(right) || !float.IsFinite(top) || !float.IsFinite(bottom) || right - left > 1e8 || bottom - top > 1e8)
             throw new InvalidOperationException("Nested UI presentation exceeded the finite geometry budget.");
-        return new(first.x, first.y, last.x - first.x, last.y - first.y);
+        return new(left, top, right - left, bottom - top);
     }
 }

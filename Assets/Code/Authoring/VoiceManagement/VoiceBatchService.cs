@@ -56,22 +56,22 @@ public sealed class VoiceBatchService(StoryNodeDataCodec codec)
         {
             DialogueNode line = item.line; AudioClipAsset? clip = null; string cue = "", message; bool applicable = false;
             var recording = languageView.Read(line);
-            if (string.IsNullOrWhiteSpace(line.textId) || duplicates.Contains(line.textId)) message = "台词 ID 为空或在不区分大小写时重复，先修复身份。";
+            if (string.IsNullOrWhiteSpace(line.textId) || duplicates.Contains(line.textId)) message = "The line ID is empty or duplicated ignoring case. Fix the identities first.";
             else if (recording.issue.Length > 0) message = recording.issue;
-            else if (!replaceExisting && recording.cue.Length > 0) message = "保留现有配音；启用替换后重新预览。";
-            else if (!names.TryGetValue(line.textId, out var matches)) message = "缺少与稳定台词 ID 同名的录音。";
-            else if (matches.Length != 1) message = "同名录音不止一个，无法确定配音。";
+            else if (!replaceExisting && recording.cue.Length > 0) message = "The existing voice binding is retained. Enable replacement and preview again to change it.";
+            else if (!names.TryGetValue(line.textId, out var matches)) message = "No recording matches the stable line ID.";
+            else if (matches.Length != 1) message = "Multiple recordings have the same name; the voice binding is ambiguous.";
             else
             {
                 clip = matches[0];
-                if (clip.isMissing || clip.metadata is null || clip.duration <= TimeSpan.Zero || clip.assetPath.localPath.Length == 0) message = "录音未成功导入或为空。";
+                if (clip.isMissing || clip.metadata is null || clip.duration <= TimeSpan.Zero || clip.assetPath.localPath.Length == 0) message = "The recording is empty or has not imported successfully.";
                 else
                 {
                     cue = project.audio.FirstOrDefault(existing => existing.clip?.identity.persistentId == clip.identity.persistentId && existing.channel == NovelAudioChannel.Voice && !existing.loop)?.resourceId
                         ?? "voice." + clip.identity.persistentId.ToString("N");
                     if (project.audio.Any(existing => existing.resourceId == cue && (existing.clip?.identity.persistentId != clip.identity.persistentId || existing.channel != NovelAudioChannel.Voice || existing.loop)))
-                        message = "生成的语音资源 ID 与游戏库中另一项冲突。";
-                    else { applicable = recording.cue != cue; message = applicable ? "可关联" : "已关联相同录音。"; }
+                        message = "The generated voice cue ID conflicts with another game resource.";
+                    else { applicable = recording.cue != cue; message = applicable ? "Ready to bind" : "The same recording is already bound."; }
                 }
             }
             rows.Add(new(item.node, line.textId, recording.speaker, recording.text, recording.cue, cue, clip?.identity.persistentId ?? Guid.Empty,
@@ -91,7 +91,7 @@ public sealed class VoiceBatchService(StoryNodeDataCodec codec)
         LocalizationTableAsset? translations = null
     ) {
         if (draft.chapterId != preview.chapter || Fingerprint(draft, preview.language, preview.localized, translations) != preview.baseline)
-            throw new AuthoringValidationException($"台词、译文或配音在预览后发生变化，请重新匹配。");
+            throw new AuthoringValidationException($"Dialogue, translations or voice bindings changed after preview. Match them again.");
     }
     /// <summary>Rejects a recording review whose linked character names changed before applying it.</summary>
     /// <param name="project">The current explicit character library.</param>
@@ -102,7 +102,7 @@ public sealed class VoiceBatchService(StoryNodeDataCodec codec)
     ) {
         foreach (var pair in preview.characterNames)
             if (!project.characters.Any(character => character.resourceId == pair.Key && character.displayName == pair.Value))
-                throw new AuthoringValidationException($"角色姓名在配音预览后发生变化，请重新匹配：{pair.Key}");
+                throw new AuthoringValidationException($"The character name changed after the voice preview. Match it again: {pair.Key}");
     }
     /// <summary>Applies only reviewed ready matches as one detached native story operation.</summary>
     /// <param name="draft">The transaction candidate.</param>
@@ -156,9 +156,9 @@ public sealed class VoiceBatchService(StoryNodeDataCodec codec)
         {
             var match = preview?.rows.SingleOrDefault(row => row.node == item.node);
             if (match is null && item.line.characterId.Length > 0 && item.line.speaker.Length == 0)
-                throw new AuthoringValidationException($"关联角色的配音稿需先 Preview 游戏上下文，再将审核结果传给 Export。");
+                throw new AuthoringValidationException($"Preview the game context before exporting character-linked voice scripts, then pass the reviewed result to Export.");
             Row([draft.chapterId, item.node, item.line.textId, match?.speaker ?? item.line.speaker, match?.text ?? item.line.text, match?.previousCue ?? item.line.voiceCueId,
-                match is { clipPath.Length: > 0 } ? match.clipPath : item.line.textId + ".wav", match?.message ?? (item.line.voiceCueId.Length == 0 ? "缺少配音" : "已关联"), preview?.language ?? ""]);
+                match is { clipPath.Length: > 0 } ? match.clipPath : item.line.textId + ".wav", match?.message ?? (item.line.voiceCueId.Length == 0 ? "Missing voice" : "Bound"), preview?.language ?? ""]);
         }
         return text.ToString();
         void Row(IEnumerable<string> cells) => text.AppendJoin(separator, cells.Select(static cell => "\"" + cell.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"")).Append("\r\n");

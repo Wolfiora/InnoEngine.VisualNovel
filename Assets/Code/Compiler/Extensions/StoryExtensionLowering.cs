@@ -52,7 +52,7 @@ internal static class StoryExtensionLowering
                 fragments = source.fragments.Select(static item => new StoryFragment { id = item.id, name = item.name, nodes = item.nodes.ToArray() }).ToArray()
             };
             var compiled = new StoryCompiler(serialization).Compile(candidate);
-            return new(compiled.program, diagnostics.Concat(compiled.diagnostics), compiled.diagnosticText);
+            return new(compiled.program, diagnostics.Concat(compiled.diagnostics));
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
         {

@@ -38,10 +38,10 @@ public sealed class VoiceBatchImportService(
         int count = preview.rows.Count(static item => item.applicable);
         if (count == 0) return 0;
         var cues = NativeVoiceImports.PrepareCues(project, preview);
-        using EditorHistoryTransaction transaction = interactions.history.BeginTransaction("批量关联对白配音");
-        if (preview.localized) resources.Edit<LocalizationTableAsset>(localeDocument, "关联语言版本语音", candidate => service.ApplyLocalized(draft, candidate, preview, cues));
-        else stories.Edit(chapterDocument, "关联台词语音", candidate => service.Apply(candidate, preview, cues));
-        resources.Edit<NovelProjectAsset>(projectDocument, "附加语音资源", candidate => { foreach (var cue in cues) NovelProjectEditService.Attach(candidate, cue); });
+        using EditorHistoryTransaction transaction = interactions.history.BeginTransaction("Bind dialogue voices in batch");
+        if (preview.localized) resources.Edit<LocalizationTableAsset>(localeDocument, "Bind localized voices", candidate => service.ApplyLocalized(draft, candidate, preview, cues));
+        else stories.Edit(chapterDocument, "Bind dialogue voice", candidate => service.Apply(candidate, preview, cues));
+        resources.Edit<NovelProjectAsset>(projectDocument, "Attach voice resources", candidate => { foreach (var cue in cues) NovelProjectEditService.Attach(candidate, cue); });
         transaction.Commit(); return count;
     }
 }

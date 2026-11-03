@@ -29,7 +29,7 @@ public sealed class BuiltInResourceCopyBatch
         if (values.Length is < 1 or > 256 || values.Any(static source => source is null || source.isMissing || source.identity.persistentId == Guid.Empty
             || source.assetPath.localPath.Length == 0 || source is not (StageAsset or CharacterAsset or PerformanceClipAsset or VisualEffectAsset or ScreenAsset or ThemeAsset or AudioCueAsset))
             || values.Select(static source => source.identity.persistentId).Distinct().Count() != values.Length)
-            throw new AuthoringArgumentException($"批量复制需要 1～256 个不同且可用的可编辑原生资源；图标作为不可变图片引用使用。", nameof(sources));
+            throw new AuthoringArgumentException($"Select 1–256 distinct, available editable native resources for copying. Icons are used as immutable image references.", nameof(sources));
         m_inputs = values.Select(source => new Input(Capture(source), source is ThemeAsset theme
             ? theme.screens.Select(binding => Capture(binding.screen ?? throw new InvalidOperationException("A selected theme page is unassigned.")))
                 .DistinctBy(static page => page.id).ToArray() : [])).ToArray();
@@ -78,7 +78,7 @@ public sealed class BuiltInResourceCopyBatch
     {
         var asset = Assets.Load<AssetObject>(source.id);
         if (asset.isMissing || asset.assetPath.ToString() != source.path || asset.contentVersion != source.revision)
-            throw new AuthoringValidationException($"源资源在批量准备后已改变、移动或缺失，请重新选择：{source.path}");
+            throw new AuthoringValidationException($"The source changed, moved or became missing after batch preparation. Select it again: {source.path}");
         return asset;
     }
 }

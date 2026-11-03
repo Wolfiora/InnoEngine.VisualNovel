@@ -29,7 +29,7 @@ internal sealed class ScriptEditorView(
 {
     private enum Mode { Cards, Compact, Proofread }
     private readonly ScriptViewportLayout m_viewport = new();
-    private readonly ScriptCardDragView m_drag = new(fields.text);
+    private readonly ScriptCardDragView m_drag = new();
     private IReadOnlyList<ScriptRow> m_rows = [];
     private long m_revision = -1;
     private Guid m_document;
@@ -73,7 +73,7 @@ internal sealed class ScriptEditorView(
             m_rows = ScriptProjectionBuilder.Build(draft); m_viewport.SetRows(m_rows.Select(static row => row.nodeId), Estimate()); m_revision = revision;
         }
         Mode mode = m_mode;
-        if (fields.SelectEnum("script/mode", "剧本视图 · Cards 卡片 / Compact 紧凑 / Proofread 阅读稿", ref mode)) { fields.Finish(); m_mode = mode; m_locate = true; }
+        if (fields.SelectEnum("script/mode", "Script view · Cards / Compact / Proofread", ref mode)) { fields.Finish(); m_mode = mode; m_locate = true; }
         if (m_seenSelection != selected) { m_seenSelection = selected; m_rangeAnchor = selected; m_locate = true; }
         var input = ImGui.GetInput();
         if (m_mode != Mode.Proofread && selected.Length > 0 && ImGui.IsWindowFocused() && !input.wantsText && !ImGui.IsAnyItemActive()
@@ -84,9 +84,9 @@ internal sealed class ScriptEditorView(
             if (documents.reorder.Adjacent(draft, new(selected), later) is { } adjacent)
             { ProposeMove(draft, selected, adjacent, true); return; }
         }
-        if (ImGui.Button(fields.Label("定位所选节点"))) m_locate = true;
-        ImGui.SameLine(); if (ImGui.Button(fields.Label("创建 / 编辑指令"))) m_advanced = selected.Length > 0 ? selected : "new";
-        ImGui.Text(m_rows.Count + fields.Localize(" 个指令 · 按实际连线分段 · 只绘制可见区域；分支、汇合、循环均保留明确目标。"));
+        if (ImGui.Button("Locate selected node")) m_locate = true;
+        ImGui.SameLine(); if (ImGui.Button("Create / edit instruction")) m_advanced = selected.Length > 0 ? selected : "new";
+        ImGui.Text(m_rows.Count + " instructions · Segmented by actual connections · Only visible content is drawn; branches, merges and loops retain explicit targets.");
         if (m_advanced == "new" && !hasExternalInspector) properties.Draw(documents, draft, selected, select);
         float width = ImGui.GetContentRegionAvailable().X;
         if (m_measuredMode != m_mode || Math.Abs(m_width - width) > 4)
@@ -107,8 +107,8 @@ internal sealed class ScriptEditorView(
             ImGui.PushId(row.nodeId);
             try
             {
-                if (row.startsBlock) ImGui.SeparatorText((draft.fragments.FirstOrDefault(fragment => fragment.id == row.fragmentId)?.name ?? fields.Localize("未归属片段")) + fields.Localize(" · 执行段"));
-                string name = catalog.TryResolve(node.definitionId, out var definition) ? fields.Localize(definition!.displayName) : "Missing · " + node.definitionId;
+                if (row.startsBlock) ImGui.SeparatorText((draft.fragments.FirstOrDefault(fragment => fragment.id == row.fragmentId)?.name ?? "No fragment") + " · Execution segment");
+                string name = catalog.TryResolve(node.definitionId, out var definition) ? definition!.displayName : "Missing · " + node.definitionId;
                 if (ImGui.Selectable(name + " · " + row.nodeId + "###vn-script-node/" + row.nodeId, navigation().selectedNodes.Contains(node.id)))
                 {
                     fields.Finish(); bool rangeSelection = ImGui.GetInput().shift;
@@ -121,7 +121,7 @@ internal sealed class ScriptEditorView(
                 { fields.Finish(); select(drop.node); ProposeMove(draft, drop.node, drop.destination, true); return; }
                 if (!hasExternalInspector && m_advanced == row.nodeId && selected == row.nodeId && m_mode != Mode.Proofread)
                 {
-                    if (ImGui.SmallButton(fields.Label("收起完整参数"))) { fields.Finish(); m_advanced = string.Empty; }
+                    if (ImGui.SmallButton("Collapse full parameters")) { fields.Finish(); m_advanced = string.Empty; }
                     else properties.Draw(documents, draft, row.nodeId, select);
                 }
                 else if (node.definitionId == StoryNodeIds.dialogue) Dialogue(draft, node, select);
@@ -133,11 +133,11 @@ internal sealed class ScriptEditorView(
                 }
                 if (m_mode == Mode.Proofread)
                 {
-                    if (ImGui.SmallButton(fields.Label("编辑此段"))) { fields.Finish(); select(row.nodeId); m_mode = Mode.Cards; m_advanced = string.Empty; m_locate = true; }
+                    if (ImGui.SmallButton("Edit this segment")) { fields.Finish(); select(row.nodeId); m_mode = Mode.Cards; m_advanced = string.Empty; m_locate = true; }
                 }
-                else if (ImGui.SmallButton(fields.Label("完整参数与连接"))) { fields.Finish(); select(row.nodeId); m_advanced = row.nodeId; }
+                else if (ImGui.SmallButton("Full parameters and connections")) { fields.Finish(); select(row.nodeId); m_advanced = row.nodeId; }
                 if (selected == row.nodeId && m_mode != Mode.Proofread && Move(draft, node)) return;
-                if (row.incoming > 1) ImGui.Text(fields.Localize("汇合 · ") + row.incoming + fields.Localize(" 个来源"));
+                if (row.incoming > 1) ImGui.Text("Merge · " + row.incoming + " incoming paths");
                 foreach (var edge in row.targets)
                 {
                     bool exists = draft.graph.document.FindNode(edge.input.nodeId) is not null;
@@ -163,44 +163,44 @@ internal sealed class ScriptEditorView(
         var line = documents.codec.Read<DialogueNode>(node);
         if (m_mode == Mode.Proofread)
         {
-            string speaker = line.speaker.Length > 0 ? line.speaker : line.characterId.Length > 0 ? "角色 · " + line.characterId : "旁白";
+            string speaker = line.speaker.Length > 0 ? line.speaker : line.characterId.Length > 0 ? "Character · " + line.characterId : "Narration";
             ImGui.Text(speaker);
             string plain;
             try { plain = NovelTextMarkup.Parse(line.text).text; }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException) { plain = line.text + "\n格式诊断：" + fields.Error(error); }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException) { plain = line.text + "\nFormatting diagnostics: " + (error).Message; }
             EditorUiSession.current.widgets.WrappedText(plain); return;
         }
         bool changed = false;
         if (m_mode == Mode.Cards)
         {
             string character = line.characterId, speaker = line.speaker, voice = line.voiceCueId;
-            changed |= fields.Text(node.id + "/character", fields.Localize("角色"), ref character); line.characterId = character;
-            if (NovelResourceSelection.Get<CharacterAsset>(interactions) is { } selectedCharacter && ImGui.SmallButton(fields.Caption("关联所选角色 · " + selectedCharacter.displayName, fields.Localize("关联所选角色 · ") + selectedCharacter.displayName)))
+            changed |= fields.Text(node.id + "/character", "Character", ref character); line.characterId = character;
+            if (NovelResourceSelection.Get<CharacterAsset>(interactions) is { } selectedCharacter && ImGui.SmallButton("Link selected character · " + selectedCharacter.displayName))
             { fields.Finish(); line.characterId = selectedCharacter.resourceId; changed = true; }
-            changed |= fields.Text(node.id + "/speaker", fields.Localize("姓名覆盖 / 旁白"), ref speaker); line.speaker = speaker;
-            changed |= fields.Text(node.id + "/voice", fields.Localize("语音提示"), ref voice); line.voiceCueId = voice;
+            changed |= fields.Text(node.id + "/speaker", "Name override / narration", ref speaker); line.speaker = speaker;
+            changed |= fields.Text(node.id + "/voice", "Voice cue", ref voice); line.voiceCueId = voice;
         }
-        else ImGui.Text(line.speaker.Length > 0 ? line.speaker : line.characterId.Length > 0 ? line.characterId : fields.Localize("旁白"));
+        else ImGui.Text(line.speaker.Length > 0 ? line.speaker : line.characterId.Length > 0 ? line.characterId : "Narration");
         if (m_focusDialogue == node.id.value) { fields.FocusText(node.id + "/text/paragraph/0"); m_focusDialogue = string.Empty; }
-        string text = line.text; changed |= fields.WritingText(node.id + "/text", fields.Localize("正文"), ref text, out bool continueRequested); line.text = text;
+        string text = line.text; changed |= fields.WritingText(node.id + "/text", "Body", ref text, out bool continueRequested); line.text = text;
         var outputs = draft.graph.document.edges.Where(edge => edge.output.nodeId == node.id).ToArray();
         bool canContinue = outputs.Length == 1 && outputs[0].output.portId.value == "next";
         if (continueRequested && canContinue)
         {
             fields.Finish(); string created = string.Empty;
-            documents.Edit(documents.activeDocumentId, fields.Localize("继续写对白"), candidate =>
+            documents.Edit(documents.activeDocumentId, "Continue writing dialogue", candidate =>
             { if (changed) documents.edits.SetSettings(candidate, node.id, line); created = documents.edits.ContinueDialogue(candidate, node.id).value; });
             select(created); m_focusDialogue = created; m_locate = true; return;
         }
         if (changed)
         {
             select(node.id.value);
-            documents.Edit(documents.activeDocumentId, fields.Localize("编辑剧本对白"), candidate => documents.edits.SetSettings(candidate, node.id, line), fields.mergeKey);
+            documents.Edit(documents.activeDocumentId, "Edit script dialogue", candidate => documents.edits.SetSettings(candidate, node.id, line), fields.mergeKey);
         }
-        if (canContinue && ImGui.SmallButton(fields.Label("继续写下一句（同角色 / 同布局，Ctrl+Enter）")))
+        if (canContinue && ImGui.SmallButton("Write the next line (same character / layout, Ctrl+Enter)"))
         {
             fields.Finish(); string created = string.Empty;
-            documents.Edit(documents.activeDocumentId, fields.Localize("继续写对白"), candidate => created = documents.edits.ContinueDialogue(candidate, node.id).value);
+            documents.Edit(documents.activeDocumentId, "Continue writing dialogue", candidate => created = documents.edits.ContinueDialogue(candidate, node.id).value);
             select(created); m_focusDialogue = created; m_locate = true;
         }
     }
@@ -212,7 +212,7 @@ internal sealed class ScriptEditorView(
         if (m_moveOwner != node.id.value)
         { m_moveOwner = node.id.value; m_move = null; m_chooseDestination = false; m_destination = m_moveError = string.Empty; }
         if (m_move is not null && m_moveRevision != documents.GetRevision(documents.activeDocumentId))
-        { m_move = null; m_moveError = fields.Localize("文档已经修改，请重新预览移动。"); }
+        { m_move = null; m_moveError = "The document changed. Preview the move again."; }
         long revision = m_revision;
         if (m_adjacentOwner != node.id.value || m_adjacentRevision != revision)
         {
@@ -221,33 +221,33 @@ internal sealed class ScriptEditorView(
         }
         var earlier = m_earlier; var later = m_later;
         ImGui.BeginDisabled(earlier is null);
-        try { if (ImGui.SmallButton(fields.Label("上移一句"))) { ProposeMove(draft, node.id.value, earlier!.Value, true); return true; } }
+        try { if (ImGui.SmallButton("Move line up")) { ProposeMove(draft, node.id.value, earlier!.Value, true); return true; } }
         finally { ImGui.EndDisabled(); }
         ImGui.SameLine(); ImGui.BeginDisabled(later is null);
-        try { if (ImGui.SmallButton(fields.Label("下移一句"))) { ProposeMove(draft, node.id.value, later!.Value, true); return true; } }
+        try { if (ImGui.SmallButton("Move line down")) { ProposeMove(draft, node.id.value, later!.Value, true); return true; } }
         finally { ImGui.EndDisabled(); }
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Label("移动到指定连线…"))) { fields.Finish(); m_chooseDestination = !m_chooseDestination; }
+        ImGui.SameLine(); if (ImGui.SmallButton("Move to connection…")) { fields.Finish(); m_chooseDestination = !m_chooseDestination; }
         if (m_chooseDestination)
         {
-            fields.Select(node.id + "/move-target", fields.Localize("插入到连接"), ref m_destination,
-                new[] { (string.Empty, fields.Localize("选择目标连接")) }.Concat(draft.graph.document.edges.Where(edge => edge.output.nodeId != node.id && edge.input.nodeId != node.id)
+            fields.Select(node.id + "/move-target", "Insert at connection", ref m_destination,
+                new[] { (string.Empty, "Select target connection") }.Concat(draft.graph.document.edges.Where(edge => edge.output.nodeId != node.id && edge.input.nodeId != node.id)
                     .Select(static edge => (edge.id.value, edge.output.nodeId.value + " / " + edge.output.portId.value + " → " + edge.input.nodeId.value))));
-            if (m_destination.Length > 0 && ImGui.SmallButton(fields.Label("预览连接变化"))) ProposeMove(draft, node.id.value, new(m_destination), false);
+            if (m_destination.Length > 0 && ImGui.SmallButton("Preview connection changes")) ProposeMove(draft, node.id.value, new(m_destination), false);
         }
         if (m_moveError.Length > 0) EditorUiSession.current.widgets.Hint(m_moveError);
         if (m_move is not { } plan) return false;
-        EditorUiSession.current.widgets.Hint(plan.crossesControlBoundary ? fields.Localize("此操作跨越控制流或片段边界。确认以下三条连接变化后作为一次历史操作应用。") : fields.Localize("同一线性执行段内换序；节点身份、正文、资源和图中位置保留。确认后应用。") );
+        EditorUiSession.current.widgets.Hint(plan.crossesControlBoundary ? "This operation crosses a control-flow or fragment boundary. Review the following three connection changes before applying them as one History operation." : "Reorder within one linear segment, preserving node identity, text, resources and graph position. Review before applying." );
         foreach (var change in plan.changes) EditorUiSession.current.widgets.WrappedText(
             change.beforeOutput.nodeId.value + " / " + change.beforeOutput.portId.value + " → " + change.beforeInput.nodeId.value + "   ⇒   "
             + change.afterOutput.nodeId.value + " / " + change.afterOutput.portId.value + " → " + change.afterInput.nodeId.value);
-        if (ImGui.SmallButton(fields.Caption(plan.crossesControlBoundary ? "接受连接变化并移动" : "应用换序", plan.crossesControlBoundary ? fields.Localize("接受连接变化并移动") : fields.Localize("应用换序"))))
+        if (ImGui.SmallButton(plan.crossesControlBoundary ? "Accept connections and move" : "Apply reorder"))
         {
             fields.Finish();
-            try { documents.Edit(documents.activeDocumentId, fields.Localize("移动剧情指令"), candidate => documents.reorder.Apply(candidate, plan, true)); m_move = null; m_chooseDestination = false; m_locate = true; }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException) { m_moveError = fields.Error(error); m_move = null; }
+            try { documents.Edit(documents.activeDocumentId, "Move story instruction", candidate => documents.reorder.Apply(candidate, plan, true)); m_move = null; m_chooseDestination = false; m_locate = true; }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException) { m_moveError = (error).Message; m_move = null; }
             return true;
         }
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Label("取消移动"))) { m_move = null; m_moveError = string.Empty; }
+        ImGui.SameLine(); if (ImGui.SmallButton("Cancel move")) { m_move = null; m_moveError = string.Empty; }
         return false;
     }
     private void ProposeMove(
@@ -262,12 +262,12 @@ internal sealed class ScriptEditorView(
             var plan = documents.reorder.Preview(draft, new(source), destination);
             if (applyLinear && !plan.crossesControlBoundary)
             {
-                documents.Edit(documents.activeDocumentId, fields.Localize("移动剧情指令"), candidate => documents.reorder.Apply(candidate, plan));
+                documents.Edit(documents.activeDocumentId, "Move story instruction", candidate => documents.reorder.Apply(candidate, plan));
                 m_chooseDestination = false; m_locate = true;
             }
             else { m_move = plan; m_moveRevision = documents.GetRevision(documents.activeDocumentId); m_locate = true; }
         }
-        catch (Exception error) when (error is ArgumentException or InvalidOperationException) { m_moveError = fields.Error(error); }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException) { m_moveError = (error).Message; }
     }
     private static void Space(float height)
     {

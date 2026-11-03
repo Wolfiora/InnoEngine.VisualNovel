@@ -83,8 +83,8 @@ public sealed class SaveService
         if (thumbnail.Length > 8 * 1024 * 1024) throw new ArgumentException("Save thumbnails must not exceed 8 MiB.", nameof(thumbnail));
         byte[] bytes = m_codec.Encode(new SaveEnvelope { kind = slot.kind, index = slot.index, utcTicks = DateTime.UtcNow.Ticks, state = state, thumbnail = thumbnail.ToArray() });
         if (bytes.Length > 64 * 1024 * 1024) throw new InvalidOperationException("Save packet exceeds the 64 MiB budget.");
-        await m_gate.WaitAsync(cancellationToken);
-        try { await m_storage.WriteAsync(Key(slot), bytes, cancellationToken); }
+        await m_gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { await m_storage.WriteAsync(Key(slot), bytes, cancellationToken).ConfigureAwait(false); }
         finally { m_gate.Release(); }
     }
 
@@ -97,7 +97,7 @@ public sealed class SaveService
         CancellationToken cancellationToken = default
     ) {
         CheckSlot(slot);
-        byte[] bytes = await m_storage.ReadAsync(Key(slot), cancellationToken) ?? throw new InvalidOperationException("The selected save slot is empty.");
+        byte[] bytes = await m_storage.ReadAsync(Key(slot), cancellationToken).ConfigureAwait(false) ?? throw new InvalidOperationException("The selected save slot is empty.");
         cancellationToken.ThrowIfCancellationRequested();
         SaveEnvelope packet = Decode(slot, bytes);
         CheckState(packet.state);
@@ -112,7 +112,7 @@ public sealed class SaveService
         var result = new List<SaveSlotMetadata>();
         foreach (SaveSlot slot in Slots())
         {
-            byte[]? bytes = await m_storage.ReadAsync(Key(slot), cancellationToken);
+            byte[]? bytes = await m_storage.ReadAsync(Key(slot), cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             if (bytes is null) continue;
             try
@@ -133,7 +133,7 @@ public sealed class SaveService
     /// <returns>An automatic slot that never overlaps manual or quick slots.</returns>
     public async ValueTask<SaveSlot> NextAutomaticAsync(CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<SaveSlotMetadata> existing = await ListAsync(cancellationToken);
+        IReadOnlyList<SaveSlotMetadata> existing = await ListAsync(cancellationToken).ConfigureAwait(false);
         for (int index = 0; index < m_automatic; index++)
             if (!existing.Any(item => item.slot == new SaveSlot(SaveSlotKind.Automatic, index))) return new(SaveSlotKind.Automatic, index);
         return existing.Where(static item => item.slot.kind == SaveSlotKind.Automatic).OrderBy(static item => item.utcTicks).ThenBy(static item => item.slot.index).First().slot;
@@ -148,8 +148,8 @@ public sealed class SaveService
         CancellationToken cancellationToken = default
     ) {
         CheckSlot(slot);
-        await m_gate.WaitAsync(cancellationToken);
-        try { return await m_storage.DeleteAsync(Key(slot), cancellationToken); }
+        await m_gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await m_storage.DeleteAsync(Key(slot), cancellationToken).ConfigureAwait(false); }
         finally { m_gate.Release(); }
     }
 

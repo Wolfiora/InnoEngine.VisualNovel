@@ -26,7 +26,7 @@ public sealed class StoryDeleteService(
         IReadOnlyCollection<string> nodes
     ) {
         var result = nodes.ToHashSet(StringComparer.Ordinal); var scopes = new ParallelEditService(edits, codec);
-        if (result.Any(id => draft.graph.document.FindNode(new(id)) is null)) throw new AuthoringValidationException($"选择中包含已经不存在的节点。");
+        if (result.Any(id => draft.graph.document.FindNode(new(id)) is null)) throw new AuthoringValidationException($"The selection contains nodes that no longer exist.");
         if (!draft.graph.document.nodes.Any(node => result.Contains(node.id.value) && node.definitionId is StoryNodeIds.parallel or StoryNodeIds.join))
             return Array.AsReadOnly(draft.graph.document.nodes.Where(node => result.Contains(node.id.value)).Select(static node => node.id.value).ToArray());
         foreach (var fork in draft.graph.document.nodes.Where(static node => node.definitionId == StoryNodeIds.parallel))
@@ -53,10 +53,10 @@ public sealed class StoryDeleteService(
     ) {
         var graph = draft.graph.document; var indexed = graph.nodes.ToDictionary(static node => node.id.value, StringComparer.Ordinal);
         var ids = nodes.ToHashSet(StringComparer.Ordinal);
-        if (ids.Count is < 1 or > 10000 || ids.Any(id => !indexed.ContainsKey(id))) throw new AuthoringValidationException($"删除组包含缺失节点或超过数量预算。");
+        if (ids.Count is < 1 or > 10000 || ids.Any(id => !indexed.ContainsKey(id))) throw new AuthoringValidationException($"The deletion group contains missing nodes or exceeds the count limit.");
         var entries = draft.entries.Where(entry => ids.Contains(entry.nodeId)).ToArray();
-        if (entries.Length > 0) throw new AuthoringValidationException($"先重新指定以下公开入口，再删除其节点：{string.Join("、", entries.Select(static entry => entry.id))}");
-        if (!ExpandBoundaries(draft, ids).All(ids.Contains)) throw new AuthoringValidationException($"选中的并行起点或汇合点必须连同其完整组删除；请先补齐并行边界选择。");
+        if (entries.Length > 0) throw new AuthoringValidationException($"Reassign these public entries before deleting their nodes: {string.Join(", ", entries.Select(static entry => entry.id))}");
+        if (!ExpandBoundaries(draft, ids).All(ids.Contains)) throw new AuthoringValidationException($"A selected parallel fork or join must be deleted with its complete group. Include the missing scope boundaries first.");
         var incoming = graph.edges.GroupBy(static edge => edge.input.nodeId.value).ToDictionary(static group => group.Key, static group => group.ToArray(), StringComparer.Ordinal);
         var outgoing = graph.edges.GroupBy(static edge => edge.output.nodeId.value).ToDictionary(static group => group.Key, static group => group.ToArray(), StringComparer.Ordinal);
         var affected = graph.edges.Where(edge => ids.Contains(edge.input.nodeId.value) || ids.Contains(edge.output.nodeId.value)).ToArray();
@@ -92,23 +92,23 @@ public sealed class StoryDeleteService(
         StoryDeletionReview review,
         IReadOnlyDictionary<GraphEdgeId, string>? targets = null
     ) {
-        if (review.chapterId != draft.chapterId) throw new AuthoringValidationException($"删除审阅属于另一个章节。");
+        if (review.chapterId != draft.chapterId) throw new AuthoringValidationException($"The deletion review belongs to another chapter.");
         var current = Preview(draft, review.nodes);
         if (!current.nodes.SequenceEqual(review.nodes) || !current.connections.SequenceEqual(review.connections) || !current.inputs.SequenceEqual(review.inputs))
-            throw new AuthoringValidationException($"删除边界已经变化，请重新审阅连接。");
+            throw new AuthoringValidationException($"The deletion boundary changed. Review its connections again.");
         var allowed = current.inputs.Select(static input => input.id).ToHashSet();
-        if (targets is not null && targets.Keys.Any(id => !allowed.Contains(id))) throw new AuthoringValidationException($"重连决定包含不属于此删除组的来源。");
+        if (targets is not null && targets.Keys.Any(id => !allowed.Contains(id))) throw new AuthoringValidationException($"The reconnection decisions contain a source outside this deletion group.");
         var removed = current.nodes.ToHashSet(StringComparer.Ordinal); var additions = new List<GraphEdgeRecord>();
         var occupied = draft.graph.document.edges.Where(edge => !removed.Contains(edge.output.nodeId.value) && !removed.Contains(edge.input.nodeId.value)).Select(static edge => edge.output).ToHashSet();
         foreach (var input in current.inputs)
         {
             string? target = targets?.TryGetValue(input.id, out string? explicitTarget) == true ? explicitTarget : input.suggestedTarget.Length > 0 ? input.suggestedTarget : null;
-            if (target is null) throw new AuthoringValidationException($"为来源明确选择替代目标或断开：{input.output.nodeId.value}/{input.output.portId.value}");
+            if (target is null) throw new AuthoringValidationException($"Explicitly select a replacement target or disconnect this source: {input.output.nodeId.value}/{input.output.portId.value}");
             if (target.Length == 0) continue;
             var node = draft.graph.document.FindNode(new(target));
             if (removed.Contains(target) || node is null || !m_catalog.TryResolve(node.definitionId, out var definition)
                 || !definition!.GetPorts(node).Any(static port => port.direction == GraphPortDirection.Input && port.id.value == "in") || !occupied.Add(input.output))
-                throw new AuthoringValidationException($"替代目标或执行输出无效：{target}");
+                throw new AuthoringValidationException($"The replacement target or execution output is invalid: {target}");
             additions.Add(new(input.id, input.output, new(new(target), new("in"))));
         }
         foreach (string id in current.nodes) draft.graph.document.RemoveNode(new(id));

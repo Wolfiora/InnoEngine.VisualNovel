@@ -12,7 +12,7 @@ public sealed class CharacterAsset : AssetObject
     /// <summary>Gets or sets the stable resource identity.</summary>
     [SerializableProperty] public string resourceId { get; set; } = "character";
     /// <summary>Gets or sets the displayed character name.</summary>
-    [SerializableProperty] public string displayName { get; set; } = "角色";
+    [SerializableProperty] public string displayName { get; set; } = "Character";
     /// <summary>Gets or sets searchable alternative names without changing the stable identity.</summary>
     [SerializableProperty] public string[] aliases { get; set; } = [];
     /// <summary>Gets or sets the dialogue name tint in packed RGBA order.</summary>

@@ -29,7 +29,7 @@ using InnoEditor.Graph;
 namespace Inno.VisualNovel.Editor.Workspace;
 
 /// <summary>Composes script, graph and interpreter preview over the same native story document.</summary>
-[EditorPanel("inno.vn.workspace", "Visual Novel", order: 450, defaultOpen: true, menuPath: "Authoring")]
+[EditorPanel("inno.vn.workspace", "Visual Novel", order: 450, defaultOpen: false, menuPath: "Authoring")]
 public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
 {
     private readonly StoryDocumentsModule m_documents;
@@ -63,7 +63,6 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
     /// <param name="interactions">The engine history and selection coordinator.</param>
     /// <param name="sceneEdits">The host-owned scene mutation service.</param>
     /// <param name="scenes">The active scene documents.</param>
-    /// <param name="properties">The root property history owner.</param>
     /// <param name="resources">The shared preview-case document owner.</param>
     /// <param name="previews">The native offscreen preview service.</param>
     /// <param name="serialization">The host-owned editor registry used by isolated native-format preview saves.</param>
@@ -72,7 +71,6 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
         EditorInteractions interactions,
         SceneEdits sceneEdits,
         IEditorSceneWorkspace scenes,
-        IInspectionPropertyEditService properties,
         ResourceDocumentsModule resources,
         IEditorPreviewService previews,
         SerializationRegistry serialization
@@ -80,7 +78,7 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
         m_documents = documents;
         m_interactions = interactions;
         m_fields = new(interactions);
-        m_search = new(m_fields.text); m_graph = new(m_fields.text);
+        m_search = new(); m_graph = new();
         m_layout = new(interactions, m_fields);
         m_deletion = new(m_fields);
         m_import = new(m_fields, interactions);
@@ -88,7 +86,7 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
         m_script = new(documents, m_fields, interactions, m_settings, () => m_graph.navigation);
         m_variables = new(m_fields, resources, interactions);
         m_structure = new(m_fields);
-        m_creation = new(documents, interactions, sceneEdits, scenes, properties);
+        m_creation = new(documents, interactions, sceneEdits, scenes, new NativeScenePropertyEdits(sceneEdits));
         m_preview = new(documents, resources, interactions, m_fields, previews, new Authoring.Preview.EditorNovelStateCodec(serialization));
         m_instructions = new(documents, m_fields);
     }
@@ -103,7 +101,7 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
     {
         m_fields.BeginFrame(); m_graphDrawn = false;
         try { DrawWorkspace(context.projectDirectory); }
-        catch (Exception failure) when (failure is not OutOfMemoryException) { m_preview.SetVisible(false); m_message = m_fields.Error(failure); m_frameDraft = null; m_frameRevision = -1; }
+        catch (Exception failure) when (failure is not OutOfMemoryException) { m_preview.SetVisible(false); m_message = (failure).Message; m_frameDraft = null; m_frameRevision = -1; }
         finally { if (!m_graphDrawn) m_graph.Suspend(); m_fields.EndFrame(); }
     }
 
@@ -130,22 +128,21 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
         m_preview.Dispose();
         m_settings.Finish();
         m_compilation = null;
-        m_graph = new(m_fields.text);
+        m_graph = new();
         m_script.Reset(); m_frameDraft = null; m_frameRevision = -1;
     }
 
     private void DrawWorkspace(string projectDirectory)
     {
         m_layout.Header();
-        if (m_fields.text.error.Length > 0) EditorUiSession.current.widgets.Hint(m_fields.text.error);
-        if (ImGui.CollapsingHeader(m_fields.Label("创建可运行游戏 / New playable game"))) m_creation.Draw();
-        if (ImGui.Button(m_fields.Label("创建分支故事 / Create story")))
+        if (ImGui.CollapsingHeader("New playable game")) m_creation.Draw();
+        if (ImGui.Button("Create branching story"))
         {
             m_settings.Finish();
             m_documents.CreateFirstStory();
         }
         ImGui.SameLine();
-        if (ImGui.Button(m_fields.Label("打开所选章节 / Open selected")))
+        if (ImGui.Button("Open selected chapter"))
         {
             m_settings.Finish();
             AssetPath? path = m_interactions.selection.selectedTarget switch
@@ -155,18 +152,18 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
                 _ => null
             };
             if (path is { } source) m_documents.Open(source);
-            else m_message = m_fields.Localize("先在 File Browser 中选择一个 .ivnstory。");
+            else m_message = "Select an .ivnstory in File Browser first.";
         }
         EditorDocumentContext? document = m_documents.activeDocument;
         if (document is not null)
         {
             ImGui.SameLine();
-            if (ImGui.Button(m_fields.Label("保存 / Save"))) { m_settings.Finish(); m_interactions.documents.Save(document.documentId); }
+            if (ImGui.Button("Save")) { m_settings.Finish(); m_interactions.documents.Save(document.documentId); }
             ImGui.SameLine();
-            if (ImGui.Button(m_fields.Label("撤销 / Undo"))) { m_settings.Finish(); m_interactions.history.Undo(); }
+            if (ImGui.Button("Undo")) { m_settings.Finish(); m_interactions.history.Undo(); }
             ImGui.SameLine();
-            if (ImGui.Button(m_fields.Label("重做 / Redo"))) { m_settings.Finish(); m_interactions.history.Redo(); }
-            ImGui.Text(document.title + (document.isDirty ? m_fields.Localize("  · 未保存") : m_fields.Localize("  · 已保存")));
+            if (ImGui.Button("Redo")) { m_settings.Finish(); m_interactions.history.Redo(); }
+            ImGui.Text(document.title + (document.isDirty ? "  · Unsaved" : "  · Saved"));
         }
         if (m_message.Length > 0)
             EditorUiSession.current.widgets.Hint(m_message);
@@ -175,12 +172,12 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
         {
             m_script.Reset(); m_frameDraft = null; m_frameRevision = -1;
             m_preview.Stop();
-            EditorUiSession.current.widgets.Hint(m_fields.Localize("创建第一段故事，或选择已导入的章节。剧本和节点图操作同一份内容；预览使用正式剧情执行器。"));
+            EditorUiSession.current.widgets.Hint("Create your first story or select an imported chapter. Script and graph edit the same content; preview uses the production story machine.");
             return;
         }
         if (m_graphDocument != document.documentId)
         {
-            m_graph = new(m_fields.text);
+            m_graph = new();
             m_graphDocument = document.documentId;
             m_selected = string.Empty;
             m_selectionRevision = -1; m_selectionPrimary = string.Empty;
@@ -210,22 +207,22 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
             bool visible = m_layout.DrawSplit(() => DrawStoryNavigation(draft),
                 () => { if (m_layout.mode == NovelWorkspaceLayout.Mode.Writing) m_script.Draw(draft, m_selected, SelectNode, SelectGroupedNode, () => ClipboardShortcuts(draft), true); else DrawGraph(draft); },
                 () => { if (!m_deletion.active) m_settings.Draw(m_documents, draft, m_selected, SelectNode); }, () =>
-                { if (!m_deletion.active) m_preview.DrawCompact(draft, SelectNode, () => { m_layout.ShowTools(); m_requestedTab = "剧情预览 / Preview"; }); });
+                { if (!m_deletion.active) m_preview.DrawCompact(draft, SelectNode, () => { m_layout.ShowTools(); m_requestedTab = "Story preview"; }); });
             m_preview.SetVisible(visible && !m_deletion.active); return;
         }
         if (!ImGui.BeginTabBar("vn-workspace")) { m_preview.SetVisible(false); return; }
         bool previewVisible = false;
         try
         {
-            Tab("剧本 / Script", () => m_script.Draw(draft, m_selected, SelectNode, SelectGroupedNode, () => ClipboardShortcuts(draft)));
-            Tab("节点图 / Graph", () => DrawGraph(draft));
-            Tab("节点属性 / Properties", () => m_settings.Draw(m_documents, draft, m_selected, SelectNode));
-            Tab("章节 / Chapter", () => m_structure.Draw(m_documents, draft, m_selected));
-            Tab("变量 / Variables", () => m_variables.Draw(m_documents, draft, SelectNode));
-            Tab("搜索与书签 / Search", () => m_search.Draw(m_documents, draft, SelectNode, m_interactions));
-            Tab("导入与阅读稿 / Import", () => m_import.Draw(m_documents, draft, projectDirectory, SelectNode));
-            Tab("剧情预览 / Preview", () => { previewVisible = true; DrawPreview(); });
-            Tab("诊断 / Diagnostics", DrawDiagnostics);
+            Tab("Script", () => m_script.Draw(draft, m_selected, SelectNode, SelectGroupedNode, () => ClipboardShortcuts(draft)));
+            Tab("Graph", () => DrawGraph(draft));
+            Tab("Node properties", () => m_settings.Draw(m_documents, draft, m_selected, SelectNode));
+            Tab("Chapter", () => m_structure.Draw(m_documents, draft, m_selected));
+            Tab("Variables", () => m_variables.Draw(m_documents, draft, SelectNode));
+            Tab("Search and bookmarks", () => m_search.Draw(m_documents, draft, SelectNode, m_interactions));
+            Tab("Import and proofread export", () => m_import.Draw(m_documents, draft, projectDirectory, SelectNode));
+            Tab("Story preview", () => { previewVisible = true; DrawPreview(); });
+            Tab("Diagnostics", DrawDiagnostics);
         }
         finally { ImGui.EndTabBar(); m_preview.SetVisible(previewVisible); }
     }
@@ -257,8 +254,8 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
     {
         EditorUiSession.current.widgets.WrappedText(draft.title);
         foreach (var entry in draft.entries)
-            if (ImGui.Selectable(m_fields.Caption("入口 · " + entry.id + "##entry-" + entry.id, m_fields.Localize("入口 · ") + entry.id + "##entry-" + entry.id), m_selected == entry.nodeId)) SelectNode(entry.nodeId);
-        ImGui.SeparatorText(m_fields.Localize("片段"));
+            if (ImGui.Selectable("Entry · " + entry.id + "##entry-" + entry.id, m_selected == entry.nodeId)) SelectNode(entry.nodeId);
+        ImGui.SeparatorText("Fragment");
         foreach (var fragment in draft.fragments)
         {
             bool selected = fragment.nodes.Contains(m_selected, StringComparer.Ordinal);
@@ -266,19 +263,19 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
                 && fragment.nodes.FirstOrDefault() is { } first) SelectNode(first);
         }
         ImGui.Separator();
-        EditorUiSession.current.widgets.Hint(m_fields.Localize("节点图和剧本共享节点选择与连线。章节结构、变量、全文搜索、书签、导入和诊断位于「全部工具」。"));
+        EditorUiSession.current.widgets.Hint("Graph and script share node selection and connections. Chapter structure, variables, search, bookmarks, import and diagnostics are under All tools.");
     }
 
     private void DrawDiagnostics()
     {
-        if (ImGui.Button(m_fields.Label("检查章节 / Validate")))
+        if (ImGui.Button("Validate chapter"))
             m_compilation = m_documents.Compile(m_documents.activeDocumentId);
         if (m_compilation is null) return;
-        ImGui.Text(m_compilation.success ? m_fields.Localize("编译成功") : m_fields.Localize("编译失败"));
+        ImGui.Text(m_compilation.success ? "Compilation succeeded" : "Compilation failed");
         foreach (GraphDiagnostic diagnostic in m_compilation.diagnostics)
         {
             if (ImGui.Selectable(diagnostic.severity + " · " + diagnostic.code + " · "
-                + m_compilation.FormatDiagnostic(diagnostic, message => m_fields.Format(message.Format, message.GetArguments())) + "###vn-diagnostic/" + diagnostic.code + "/" + diagnostic.nodeId + "/" + diagnostic.edgeId))
+                + diagnostic.message + "###vn-diagnostic/" + diagnostic.code + "/" + diagnostic.nodeId + "/" + diagnostic.edgeId))
             {
                 var graph = m_frameDraft?.graph.document;
                 string node = diagnostic.nodeId?.value ?? string.Empty;
@@ -307,19 +304,19 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
     private void DrawSelection(StoryDraftState draft)
     {
         int count = m_graph.navigation.selectedNodes.Count;
-        ImGui.Text(m_fields.Localize("已选 ") + count + m_fields.Localize(" 项 · 剧本 Ctrl/Super 切换，Shift 连选；与节点图共用选择。"));
-        if (ImGui.SmallButton(m_fields.Label("选择全部指令")))
+        ImGui.Text("Selected " + count + " items · Ctrl/Super toggles and Shift selects a range in the script; selection is shared with the graph.");
+        if (ImGui.SmallButton("Select all instructions"))
         {
             m_fields.Finish(); m_graph.navigation.SelectNodes(draft.graph.document.nodes.Select(static node => node.id));
             SelectGroupedNode(m_selected.Length > 0 ? m_selected : draft.graph.document.nodes.FirstOrDefault()?.id.value ?? string.Empty);
         }
         if (count > 0)
         {
-            ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Caption("复制所选 " + count + " 项", m_fields.Localize("复制所选 ") + count + m_fields.Localize(" 项")))) m_settings.CopySelection(m_documents, draft, m_graph.navigation.selectedNodes.Select(static id => id.value).ToArray());
-            ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Label("只保留主选项"))) { m_fields.Finish(); SelectNode(m_selected); }
-            ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Label("补齐所选并行边界"))) SelectPastedNodes(m_documents.deletion.ExpandBoundaries(draft,
+            ImGui.SameLine(); if (ImGui.SmallButton("Copy selected " + count + " items")) m_settings.CopySelection(m_documents, draft, m_graph.navigation.selectedNodes.Select(static id => id.value).ToArray());
+            ImGui.SameLine(); if (ImGui.SmallButton("Keep primary selection only")) { m_fields.Finish(); SelectNode(m_selected); }
+            ImGui.SameLine(); if (ImGui.SmallButton("Complete selected parallel boundary")) SelectPastedNodes(m_documents.deletion.ExpandBoundaries(draft,
                 m_graph.navigation.selectedNodes.Select(static id => id.value).ToArray()));
-            ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Label("删除所选组…"))) RequestDeletion(draft);
+            ImGui.SameLine(); if (ImGui.SmallButton("Delete selected group…")) RequestDeletion(draft);
         }
     }
     private bool ClipboardShortcuts(StoryDraftState draft)
@@ -331,7 +328,7 @@ public sealed class NovelWorkspacePanel : EditorPanel, IEditorPanelReloadState
         }, () =>
         {
             m_settings.RequestPaste();
-            if (m_layout.mode == NovelWorkspaceLayout.Mode.Tools) m_requestedTab = "节点属性 / Properties";
+            if (m_layout.mode == NovelWorkspaceLayout.Mode.Tools) m_requestedTab = "Node properties";
         }, () => RequestDeletion(draft), () =>
         {
             m_fields.Finish(); SelectPastedNodes(draft.graph.document.nodes.Select(static node => node.id.value).ToArray());

@@ -18,7 +18,7 @@ public enum NovelLogLevel
 public sealed class LogNode : ISerializable
 {
     /// <summary>Gets or sets a plain message using the ordinary story variable interpolation syntax.</summary>
-    [SerializableProperty] public string message { get; set; } = "调试信息";
+    [SerializableProperty] public string message { get; set; } = "Debug message";
     /// <summary>Gets or sets the engine severity selected by the author.</summary>
     [SerializableProperty] public NovelLogLevel level { get; set; }
     /// <summary>Gets or sets whether published play suppresses this diagnostic while preserving its continuation.</summary>

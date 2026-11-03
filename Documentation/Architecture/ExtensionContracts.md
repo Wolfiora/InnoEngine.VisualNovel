@@ -12,7 +12,7 @@ UI 动作目录声明类型化参数，UiActionRegistry 绑定当前 owner 的�
 
 该显式编译 API 不等于 Editor/Importer 的自动接入。正式导入上下文尚无导出的类型目录或 owner 服务注册协议，默认 StoryImporter 不会读取某个编辑器单例注册表。自定义节点的自动菜单、通用参数表单及与正式导入绑定，仍是没有交付的宿主接入部分；不能仅凭纯编译 API 测试标记完整工作流。
 
-确定性演出参数通过 `NovelPerformanceTargets` 显式声明 `extension/` 目标和允许的现有标量通道。输入字典/数组在构造时冻结，声明参与精确存档指纹；通常时间线的目标槽、播放、取消、保存、回滚和回想保持同一执行链。Session 的读取 API 返回现有 PerformanceSample 值，不回调场景脚本或持有外部设备。Native NovelPlayerComponent 提供会话创建前配置入口，桥接仍通过正常 GameObject/GameBehavior 生命周期读取。桥接代码及依赖由既有 hostCodeFingerprint 明确贡献。
+确定性演出参数通过 `NovelPerformanceTargets` 显式声明 `extension/` 目标和允许的现有标量通道。输入字典/数组在构造时冻结，声明参与精确存档指纹；通常时间线的目标槽、播放、取消、保存、回滚和回想保持同一执行链。Session 的读取 API 返回现有 PerformanceSample 值，不回调场景脚本或持有外部设备。Native NovelSceneSystem 提供会话创建前配置入口，桥接仍通过正常 GameObject/GameBehavior 生命周期读取。桥接代码及依赖由既有 hostCodeFingerprint 明确贡献。
 
 这个通道不捕获任意外部场景对象、线程或第三方状态。桥接将参数投影到自己的表现，并在写入者消失时恢复作者默认值；外部副作用继续遵循 NovelCommand 的取消、保存与回滚屏障。骨骼、视频、自动类型发现和专用第三方编辑器没有因此实现。参见 [参数通道指南](../../Assets/Documentation/Scripting/PerformanceTargets.md)。`ExtensionPerformance-FinalOwnedFormalCompile.txt` 正式编译/十程序集和三项定向已通过，含直接目标绑定和原生组件生命周期；`Contracts-242-ExtensionPerformance.txt` 完整回归为 242 项通过、0 失败。
 

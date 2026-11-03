@@ -70,10 +70,5 @@ internal static class CharacterComposer
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         if (id.Contains('/') || id.Contains('\\')) throw new ArgumentException("Character instance names cannot contain path separators.", nameof(id));
     }
-    private static double Phase(string text)
-    {
-        uint hash = 2166136261;
-        foreach (char value in text) { hash = unchecked((hash ^ (byte)value) * 16777619); hash = unchecked((hash ^ (byte)(value >> 8)) * 16777619); }
-        return hash / ((double)uint.MaxValue + 1);
-    }
+    private static double Phase(string text) => CharacterFrameSampler.Phase(text);
 }

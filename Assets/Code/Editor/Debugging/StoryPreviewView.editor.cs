@@ -80,79 +80,79 @@ internal sealed class StoryPreviewView : IDisposable
         Action<string> locate
     ) {
         SetVisible(true);
-        if (ImGui.Button(m_fields.Label("使用所选游戏作为预览上下文")))
+        if (ImGui.Button("Use selected game as preview context"))
         {
-            m_context = NovelResourceSelection.Get<NovelProjectAsset>(m_interactions) ?? throw new InvalidOperationException(m_fields.Localize("在 File Browser 中选择游戏定义 .ivnproject。"));
+            m_context = NovelResourceSelection.Get<NovelProjectAsset>(m_interactions) ?? throw new InvalidOperationException("Select an .ivnproject game definition in File Browser.");
             Stop();
         }
         if (m_context is null)
         {
-            EditorUiSession.current.widgets.Hint(m_fields.Localize("先选择游戏定义。预览会读取它的资源与界面，并编译当前未保存的章节；不读取玩家存档或执行外部副作用。")); return;
+            EditorUiSession.current.widgets.Hint("Select a game first. Preview uses its resources and screens and compiles the current unsaved chapter. It does not read player saves or execute external side effects."); return;
         }
-        ImGui.Text(m_fields.Localize("上下文 · ") + m_context.title);
-        bool nativeCase = m_toolbar.Draw<NovelPreviewCaseAsset>("预览用例", ".ivntest", static () => new(), out var stored);
+        ImGui.Text("Context · " + m_context.title);
+        bool nativeCase = m_toolbar.Draw<NovelPreviewCaseAsset>("Preview case", ".ivntest", static () => new(), out var stored);
         NovelPreviewCaseAsset test = nativeCase ? stored! : m_temporary;
         bool changed = Settings(draft, selected, test);
         changed |= m_debugView.Settings(test, draft.chapterId, selected, draft.GetVariables());
         if (changed)
         {
-            if (nativeCase) m_resources.Edit<NovelPreviewCaseAsset>(m_toolbar.documentId, m_fields.Localize("编辑预览用例"), target => CopySettings(test, target), m_fields.mergeKey);
+            if (nativeCase) m_resources.Edit<NovelPreviewCaseAsset>(m_toolbar.documentId, "Edit preview case", target => CopySettings(test, target), m_fields.mergeKey);
             else m_temporary = test;
         }
         Guid caseDocument = nativeCase ? m_toolbar.documentId : Guid.Empty;
         if (m_preparation is { } pending && (caseDocument != pending.caseDocument || changed))
-            CancelPreparation("预览设置已变化，请重新运行。");
+            CancelPreparation("Preview settings changed. Run the preview again.");
         if (m_preview is not null && (caseDocument != m_previewCaseDocument || changed && !nativeCase))
-            m_freshness?.Invalidate("当前预览用例或临时设置已变化。");
-        if (ImGui.Button(m_fields.Label("运行此预览")))
+            m_freshness?.Invalidate("The current preview case or temporary settings changed.");
+        if (ImGui.Button("Run this preview"))
             StartPreview(draft, test, caseDocument);
         if (DrawPreparation()) return;
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
         if (m_preview is null) return;
-        ImGui.Text(m_fields.Format("预览输入 · {0} 项资源，其中 {1} 项来自当前未保存文档。", m_inputSourceCount, m_unsavedInputCount));
-        ImGui.SameLine(); if (ImGui.Button(m_fields.Label("停止预览"))) { Stop(); return; }
-        ImGui.SameLine(); if (ImGui.Button(m_fields.Caption(m_paused ? "继续时间" : "暂停时间", m_paused ? m_fields.Localize("继续时间") : m_fields.Localize("暂停时间")))) m_paused = !m_paused;
+        ImGui.Text(string.Format(System.Globalization.CultureInfo.InvariantCulture,"Preview inputs · {0} resources, including {1} from current unsaved documents.", m_inputSourceCount, m_unsavedInputCount));
+        ImGui.SameLine(); if (ImGui.Button("Stop preview")) { Stop(); return; }
+        ImGui.SameLine(); if (ImGui.Button(m_paused ? "Resume time" : "Pause time")) m_paused = !m_paused;
         m_debugView.Draw(m_debugger!, m_preview, test, source => LocateSource(source, locate));
         TickPreview();
-        if (m_paused && ImGui.Button(m_fields.Label("单步时间 1/60 秒")))
+        if (m_paused && ImGui.Button("Step time by 1/60 second"))
         {
             m_preview.session.audio?.SetSuspended(false); m_preview.StepTime(1.0 / 60); m_preview.session.audio?.SetSuspended(true);
         }
-        if (m_preview.routeRunning && ImGui.Button(m_fields.Label("暂停路线重放"))) m_preview.StopRoute();
-        if (m_preview.holdingRoute && ImGui.Button(m_fields.Label("从当前状态继续游玩"))) m_preview.ContinuePlaying();
+        if (m_preview.routeRunning && ImGui.Button("Pause route playback")) m_preview.StopRoute();
+        if (m_preview.holdingRoute && ImGui.Button("Continue playing from this state")) m_preview.ContinuePlaying();
         m_preview.session.audio?.SetSuspended(m_paused || m_preview.holdingRoute || m_debugger!.paused);
-        if (m_preview.error.Length > 0) EditorUiSession.current.widgets.Hint(m_preview.failure is { } cause ? m_fields.Error(cause) : m_preview.error);
-        if (m_preview.targetReached) ImGui.Text(m_fields.Localize("已到达路线目标。可以检查当前状态或继续手动游玩。"));
+        if (m_preview.error.Length > 0) EditorUiSession.current.widgets.Hint(m_preview.failure is { } cause ? (cause).Message : m_preview.error);
+        if (m_preview.targetReached) ImGui.Text("Route target reached. Inspect this state or continue playing manually.");
         var story = m_preview.session.interactiveStory!;
         ImGui.Text(story.status + " · " + story.sourceChapterId + "/" + story.sourceNodeId);
         if (story.status == StoryStatus.Faulted) EditorUiSession.current.widgets.Hint(story.error);
-        if (ImGui.Button(m_fields.Label("定位当前节点"))) LocateSource(story.debugLocation, locate);
+        if (ImGui.Button("Locate current node")) LocateSource(story.debugLocation, locate);
         RuntimeInput(story);
         DrawCanvas();
-        if (ImGui.CollapsingHeader(m_fields.Label("会话变量（只影响当前预览）")))
+        if (ImGui.CollapsingHeader("Session variables (current preview only)"))
         {
             StoryMachine observed = m_debugger?.stoppedTask ?? story;
             foreach (var variable in observed.InspectVariables())
             {
                 NovelValue value = variable.value;
                 if (m_values.Draw("preview-observe/" + variable.id, ref value, false))
-                { observed.SetVariable(variable.id, value); m_preview.InvalidateRouteRecording("会话变量经过调试修改；请保存局部初值，或重新从入口录制路线。"); }
+                { observed.SetVariable(variable.id, value); m_preview.InvalidateRouteRecording("Session variables were changed in the debugger. Save explicit local initial values, or record the route again from its entry."); }
             }
         }
         if (m_freshness?.stale != true && (story.status is StoryStatus.Dialogue or StoryStatus.Choice or StoryStatus.Input or StoryStatus.AdvanceWait)
-            && ImGui.Button(m_fields.Label("将实际试玩路线写入此用例")) && ConfirmWriteBack())
+            && ImGui.Button("Record the played route in this case") && ConfirmWriteBack())
         {
             var recorded = m_preview.CaptureRoute(); m_fields.Finish();
-            if (nativeCase) m_resources.Edit<NovelPreviewCaseAsset>(m_toolbar.documentId, m_fields.Localize("录制试玩路线"), target => CopySettings(recorded, target)); else m_temporary = recorded;
+            if (nativeCase) m_resources.Edit<NovelPreviewCaseAsset>(m_toolbar.documentId, "Record played route", target => CopySettings(recorded, target)); else m_temporary = recorded;
         }
         if (m_preview.recordingError.Length > 0) EditorUiSession.current.widgets.Hint(m_preview.recordingError);
-        if (m_freshness?.stale != true && story.canSave && ImGui.Button(m_fields.Label("将当前变量与舞台写入此用例")) && ConfirmWriteBack())
+        if (m_freshness?.stale != true && story.canSave && ImGui.Button("Store current variables and stage in this case") && ConfirmWriteBack())
         {
             var current = story.Capture(); test.initialValues = current.gameVariables.Concat(current.localVariables).Concat(m_preview.session.CaptureProgress().variables).ToArray();
             test.stage = m_preview.session.stage.Capture(); test.useStageSnapshot = true; test.mode = PreviewRunMode.Local; test.nodeId = story.sourceNodeId;
-            if (story.sourceChapterId != draft.chapterId) throw new InvalidOperationException(m_fields.Localize("打开当前节点所属章节后再保存局部用例。"));
+            if (story.sourceChapterId != draft.chapterId) throw new InvalidOperationException("Open the current node's chapter before saving a local preview case.");
             m_fields.Finish();
-            if (nativeCase) m_resources.Edit<NovelPreviewCaseAsset>(m_toolbar.documentId, m_fields.Localize("保存预览初始状态"), target => CopySettings(test, target)); else m_temporary = test;
+            if (nativeCase) m_resources.Edit<NovelPreviewCaseAsset>(m_toolbar.documentId, "Save preview initial state", target => CopySettings(test, target)); else m_temporary = test;
         }
     }
 
@@ -162,43 +162,43 @@ internal sealed class StoryPreviewView : IDisposable
         NovelPreviewCaseAsset test
     ) {
         bool changed = false; PreviewRunMode mode = test.mode;
-        changed |= m_fields.SelectEnum("preview/mode", "预览方式", ref mode); test.mode = mode;
+        changed |= m_fields.SelectEnum("preview/mode", "Preview mode", ref mode); test.mode = mode;
         string chapter = test.chapterId, entry = test.entryId, node = test.nodeId;
-        changed |= m_fields.Select("preview/chapter", m_fields.Localize("起始章节"), ref chapter, new[] { (string.Empty, m_fields.Localize("游戏默认章节")) }
+        changed |= m_fields.Select("preview/chapter", "Starting chapter", ref chapter, new[] { (string.Empty, "Game's default chapter") }
             .Concat(m_context!.chapters.Select(static item => (item.chapterId, item.title)))); test.chapterId = chapter;
         var source = m_context.chapters.SingleOrDefault(item => item.chapterId == (chapter.Length == 0 ? m_context.startChapter : chapter));
-        changed |= m_fields.Select("preview/entry", m_fields.Localize("公开入口"), ref entry, new[] { (string.Empty, m_fields.Localize("游戏默认入口")) }
+        changed |= m_fields.Select("preview/entry", "Public entry", ref entry, new[] { (string.Empty, "Game's default entry") }
             .Concat(source?.program?.entries.Select(static item => (item.id, item.id)) ?? [])); test.entryId = entry;
         if (mode != PreviewRunMode.Complete)
         {
-            if (m_fields.Text("preview/node", mode == PreviewRunMode.Local ? m_fields.Localize("局部起点") : m_fields.Localize("交互目标"), ref node)) { test.nodeId = node; test.targetInteraction = 0; changed = true; }
-            if (selected.Length > 0 && ImGui.Button(m_fields.Label("使用所选节点作为起点/目标"))) { m_fields.Finish(); test.nodeId = selected; test.targetInteraction = 0; changed = true; }
-            EditorUiSession.current.widgets.Hint(mode == PreviewRunMode.Local ? m_fields.Localize("局部预览使用这里明确指定的变量和舞台；未覆盖的变量采用声明默认值，不重建过去。") : m_fields.Localize("从公开入口按选项记录重放到当前章节中的对白、选项或输入节点。"));
+            if (m_fields.Text("preview/node", mode == PreviewRunMode.Local ? "Local starting node" : "Interaction target", ref node)) { test.nodeId = node; test.targetInteraction = 0; changed = true; }
+            if (selected.Length > 0 && ImGui.Button("Use selected node as start / target")) { m_fields.Finish(); test.nodeId = selected; test.targetInteraction = 0; changed = true; }
+            EditorUiSession.current.widgets.Hint(mode == PreviewRunMode.Local ? "Local preview uses the variables and stage specified here. Unspecified variables use their declared defaults. Past story state is not reconstructed." : "Replay recorded decisions from a public entry to a dialogue, choice or input node in the current chapter.");
         }
         if (mode == PreviewRunMode.Route)
         {
-            ImGui.Text(m_fields.Localize("目标交互序号 · ") + test.targetInteraction + m_fields.Localize("（0 为首次匹配）"));
-            if (test.targetInteraction > 0 && ImGui.Button(m_fields.Label("改为首次匹配目标"))) { m_fields.Finish(); test.targetInteraction = 0; changed = true; }
+            ImGui.Text("Target interaction sequence · " + test.targetInteraction + " (0 uses the first match)");
+            if (test.targetInteraction > 0 && ImGui.Button("Use the first matching target")) { m_fields.Finish(); test.targetInteraction = 0; changed = true; }
             string choices = string.Join('\n', test.choices);
-            if (m_fields.MultilineText("preview/choices", m_fields.Localize("路线选项 ID（每行一个）"), ref choices)) { test.choices = choices.Split('\n').Where(static item => item.Length > 0).ToArray(); changed = true; }
+            if (m_fields.MultilineText("preview/choices", "Route choice IDs (one per line)", ref choices)) { test.choices = choices.Split('\n').Where(static item => item.Length > 0).ToArray(); changed = true; }
             double maximum = test.maximumSeconds;
-            changed |= m_fields.Number("preview/maximum", m_fields.Localize("路线最长逻辑秒数"), ref maximum, 0.1, 3600); test.maximumSeconds = maximum;
+            changed |= m_fields.Number("preview/maximum", "Maximum route duration (logical seconds)", ref maximum, 0.1, 3600); test.maximumSeconds = maximum;
             int removeInput = -1;
             for (int index = 0; index < test.inputs.Length; index++)
             {
                 PreviewInput input = test.inputs[index]; string prefix = "preview/input/" + index;
                 string chapterId = input.chapterId, nodeId = input.nodeId, text = input.text;
-                changed |= m_fields.Text(prefix + "/chapter", m_fields.Localize("输入章节 ID"), ref chapterId); input.chapterId = chapterId;
-                changed |= m_fields.Text(prefix + "/node", m_fields.Localize("输入节点 ID"), ref nodeId); input.nodeId = nodeId;
-                bool cancel = input.cancel; changed |= m_fields.Toggle(prefix + "/cancel", "取消此输入", ref cancel); input.cancel = cancel;
-                if (!cancel) { changed |= m_fields.Text(prefix + "/text", m_fields.Localize("测试输入文字"), ref text); input.text = text; }
-                if (ImGui.Button(m_fields.Caption("删除此输入步骤##" + prefix, m_fields.Localize("删除此输入步骤##") + prefix))) removeInput = index;
+                changed |= m_fields.Text(prefix + "/chapter", "Input chapter ID", ref chapterId); input.chapterId = chapterId;
+                changed |= m_fields.Text(prefix + "/node", "Input node ID", ref nodeId); input.nodeId = nodeId;
+                bool cancel = input.cancel; changed |= m_fields.Toggle(prefix + "/cancel", "Cancel this input", ref cancel); input.cancel = cancel;
+                if (!cancel) { changed |= m_fields.Text(prefix + "/text", "Test input text", ref text); input.text = text; }
+                if (ImGui.Button("Remove this input step##" + prefix)) removeInput = index;
             }
             if (removeInput >= 0) { m_fields.Finish(); test.inputs = test.inputs.Where((_, index) => index != removeInput).ToArray(); changed = true; }
-            if (selected.Length > 0 && draft.graph.document.FindNode(new(selected))?.definitionId == Model.Story.StoryNodeIds.input && ImGui.Button(m_fields.Label("为所选输入节点添加测试文字")))
+            if (selected.Length > 0 && draft.graph.document.FindNode(new(selected))?.definitionId == Model.Story.StoryNodeIds.input && ImGui.Button("Add test text for the selected input node"))
             { m_fields.Finish(); test.inputs = [.. test.inputs, new() { chapterId = draft.chapterId, nodeId = selected }]; changed = true; }
         }
-        if (ImGui.CollapsingHeader(m_fields.Label("预览变量初值")))
+        if (ImGui.CollapsingHeader("Preview initial variable values"))
         {
             foreach (var definition in draft.GetVariables())
             {
@@ -216,7 +216,7 @@ internal sealed class StoryPreviewView : IDisposable
             }
         }
         bool snapshot = test.useStageSnapshot;
-        changed |= m_fields.Toggle("preview/stage-snapshot", "使用已保存的舞台快照", ref snapshot); test.useStageSnapshot = snapshot;
+        changed |= m_fields.Toggle("preview/stage-snapshot", "Use the saved stage snapshot", ref snapshot); test.useStageSnapshot = snapshot;
         return changed;
     }
 
@@ -224,8 +224,8 @@ internal sealed class StoryPreviewView : IDisposable
     {
         if (story.status != StoryStatus.Input) return;
         string text = story.inputText;
-        if (ImGui.InputText(m_fields.Label("测试输入文字##preview-live-input"), ref text, 32768)) story.SetInputText(text);
-        if (story.isInputValid && ImGui.Button(m_fields.Label("提交测试输入"))) { m_preview!.session.SubmitInput(); m_preview.ObserveInteraction(); }
+        if (ImGui.InputText("Test input text##preview-live-input", ref text, 32768)) story.SetInputText(text);
+        if (story.isInputValid && ImGui.Button("Submit test input")) { m_preview!.session.SubmitInput(); m_preview.ObserveInteraction(); }
     }
     private void LocateSource(
         StoryDebugLocation source,
@@ -234,16 +234,16 @@ internal sealed class StoryPreviewView : IDisposable
         Guid previous = m_stories.activeDocumentId;
         try
         {
-            var context = m_context ?? throw new AuthoringValidationException($"先选择明确的游戏上下文，再定位跨章节调试来源。");
-            if (m_freshness is not null && !m_freshness.CheckAll()) throw new AuthoringValidationException($"预览来源已变化，请重新运行预览后定位。");
+            var context = m_context ?? throw new AuthoringValidationException($"Select an explicit game context before navigating across debug chapters.");
+            if (m_freshness is not null && !m_freshness.CheckAll()) throw new AuthoringValidationException($"Preview sources changed. Run preview again before navigating.");
             var snapshot = PreviewSourceNavigator.Resolve(context, m_stories, source.chapter, source.node, m_previewSource);
             m_fields.Finish(); m_stories.Open(snapshot.path);
             if (m_stories.Inspect(snapshot.path).fingerprint != snapshot.fingerprint)
-                throw new AuthoringValidationException($"调试来源在定位期间发生变化，请重新定位。");
+                throw new AuthoringValidationException($"The debug source changed during navigation. Locate it again.");
             select(source.node); m_message = string.Empty;
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
-        { if (previous != Guid.Empty) m_stories.activeDocumentId = previous; m_message = m_fields.Error(failure); }
+        { if (previous != Guid.Empty) m_stories.activeDocumentId = previous; m_message = (failure).Message; }
     }
     internal void DrawCompact(
         StoryDraftState draft,
@@ -251,27 +251,27 @@ internal sealed class StoryPreviewView : IDisposable
         Action settings
     ) {
         SetVisible(true);
-        if (ImGui.SmallButton(m_fields.Label("预览设置与调试"))) { m_fields.Finish(); settings(); }
+        if (ImGui.SmallButton("Preview settings and debugging")) { m_fields.Finish(); settings(); }
         if (m_preparation is not null && DrawPreparation()) return;
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
         if (m_preview is null)
         {
-            if (ImGui.Button(m_fields.Label("使用所选游戏")))
-                m_context = NovelResourceSelection.Get<NovelProjectAsset>(m_interactions) ?? throw new InvalidOperationException(m_fields.Localize("选择游戏定义 .ivnproject 作为明确预览上下文。"));
-            if (m_context is null) { EditorUiSession.current.widgets.Hint(m_fields.Localize("选择游戏定义后，从真实游戏入口开始预览；局部初值与路线用例在预览设置中配置。")); return; }
-            if (ImGui.Button(m_fields.Label("从游戏入口运行"))) StartPreview(draft, new() { mode = PreviewRunMode.Complete });
+            if (ImGui.Button("Use selected game"))
+                m_context = NovelResourceSelection.Get<NovelProjectAsset>(m_interactions) ?? throw new InvalidOperationException("Select an .ivnproject game definition as the explicit preview context.");
+            if (m_context is null) { EditorUiSession.current.widgets.Hint("Choose a game definition to preview from its actual entry. Configure local initial values and route cases in preview settings."); return; }
+            if (ImGui.Button("Run from game entry")) StartPreview(draft, new() { mode = PreviewRunMode.Complete });
             if (m_preparation is not null) return;
             if (m_preview is null) return;
         }
-        ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Caption(m_paused ? "继续" : "暂停", m_paused ? m_fields.Localize("继续") : m_fields.Localize("暂停")))) m_paused = !m_paused;
-        ImGui.SameLine(); if (ImGui.SmallButton(m_fields.Label("停止"))) { Stop(); return; }
+        ImGui.SameLine(); if (ImGui.SmallButton(m_paused ? "Continue" : "Pause")) m_paused = !m_paused;
+        ImGui.SameLine(); if (ImGui.SmallButton("Stop")) { Stop(); return; }
         TickPreview();
         var story = m_preview.session.interactiveStory!;
-        if (m_preview.holdingRoute && ImGui.SmallButton(m_fields.Label("继续游玩"))) m_preview.ContinuePlaying();
-        if (m_preview.routeRunning && ImGui.SmallButton(m_fields.Label("暂停路线"))) m_preview.StopRoute();
-        if (ImGui.SmallButton(m_fields.Label("定位当前指令"))) LocateSource(story.debugLocation, locate);
-        if (m_debugger?.paused == true) EditorUiSession.current.widgets.Hint(m_fields.Localize("已在断点暂停，可打开预览设置继续或单步。"));
-        if (m_preview.error.Length > 0) EditorUiSession.current.widgets.Hint(m_preview.failure is { } cause ? m_fields.Error(cause) : m_preview.error);
+        if (m_preview.holdingRoute && ImGui.SmallButton("Continue playing")) m_preview.ContinuePlaying();
+        if (m_preview.routeRunning && ImGui.SmallButton("Pause route")) m_preview.StopRoute();
+        if (ImGui.SmallButton("Locate current instruction")) LocateSource(story.debugLocation, locate);
+        if (m_debugger?.paused == true) EditorUiSession.current.widgets.Hint("Paused at a breakpoint. Open preview settings to continue or step.");
+        if (m_preview.error.Length > 0) EditorUiSession.current.widgets.Hint(m_preview.failure is { } cause ? (cause).Message : m_preview.error);
         if (story.status == StoryStatus.Faulted) EditorUiSession.current.widgets.Hint(story.error);
         RuntimeInput(story); DrawCanvas(true);
     }
@@ -281,7 +281,7 @@ internal sealed class StoryPreviewView : IDisposable
         Guid caseDocument = default
     ) {
         m_fields.Finish();
-        var context = m_context ?? throw new InvalidOperationException(m_fields.Localize("先选择预览的游戏定义。"));
+        var context = m_context ?? throw new InvalidOperationException("Choose a game definition for preview first.");
         CancelPreparation(string.Empty);
         var frozenCase = InnoEditor.Assets.EditorAssets.DecodeNative<NovelPreviewCaseAsset>(InnoEditor.Assets.EditorAssets.EncodeNative(test));
         var frozenDraft = m_stories.Read(m_stories.activeDocumentId);
@@ -296,14 +296,13 @@ internal sealed class StoryPreviewView : IDisposable
         if (m_preparation is not { } pending) return false;
         if (pending.chapterStamp is { } chapter && m_stories.GetStamp(chapter.documentId) != chapter
             || pending.caseStamp is { } test && m_resources.GetStamp(test.documentId) != test)
-        { CancelPreparation("预览章节或用例在准备期间已修改、保存或关闭，请重新运行。"); return false; }
-        var progress = pending.operation.progressMessage;
-        ImGui.Text(m_fields.Format(progress.Format, progress.GetArguments()) + m_fields.Localize(" · 已捕获 ") + pending.operation.capturedSources + m_fields.Localize(" 项资源"));
-        if (ImGui.Button(m_fields.Label("取消预览准备"))) { CancelPreparation("已取消准备，保留先前预览。"); return false; }
+        { CancelPreparation("The preview chapter or case was edited, saved or closed during preparation. Run it again."); return false; }
+        ImGui.Text(pending.operation.progress + " · Captured " + pending.operation.capturedSources + " resources");
+        if (ImGui.Button("Cancel preview preparation")) { CancelPreparation("Preparation cancelled. The previous preview is retained."); return false; }
         if (!pending.operation.Advance()) return true;
         m_preparation = null;
         using var completed = pending.operation;
-        if (completed.result is not { } prepared) { m_message = completed.failure is { } cause ? m_fields.Error(cause) : completed.error; return false; }
+        if (completed.result is not { } prepared) { m_message = completed.failure is { } cause ? (cause).Message : completed.error; return false; }
         NovelPreviewSession? candidate = null;
         try
         {
@@ -320,7 +319,7 @@ internal sealed class StoryPreviewView : IDisposable
             m_inputSourceCount = prepared.sources.Count; m_unsavedInputCount = prepared.unsavedCount;
         }
         catch (Exception failure) when (failure is not OutOfMemoryException)
-        { candidate?.Dispose(); m_message = m_fields.Error(failure); }
+        { candidate?.Dispose(); m_message = (failure).Message; }
         return false;
     }
     private void CancelPreparation(string message)
@@ -344,7 +343,7 @@ internal sealed class StoryPreviewView : IDisposable
     private void ShowFreshness()
     {
         if (m_freshness?.stale != true) return;
-        string message = m_freshness.reason + " 重新运行预览后再录制路线或写回用例；当前会话仍使用先前准备的剧情与界面。";
+        string message = m_freshness.reason + " Run the preview again before recording a route or updating the case. The current session still uses its previously prepared story and screens.";
         if (m_preview!.recordingError.Length == 0) m_preview.InvalidateRouteRecording(message);
         EditorUiSession.current.widgets.Hint(message);
     }
@@ -365,14 +364,14 @@ internal sealed class StoryPreviewView : IDisposable
         m_textBridgeActive = false;
         if (owner.view.TryGetFocusedInputText(out string current))
         {
-            bool changed = m_fields.Text("preview/live-input", m_fields.Localize("预览中的文字输入"), ref current);
+            bool changed = m_fields.Text("preview/live-input", "Preview text input", ref current);
             m_textBridgeActive = ImGui.IsItemActive();
             if (changed)
                 owner.HandleInput(new() { selectAll = true, delete = current.Length == 0, text = current.Length == 0 ? [] : [current] });
             if (owner.session.page == "reading" && owner.session.interactiveStory is { status: StoryStatus.Input } playerInput)
             {
                 ImGui.BeginDisabled(!playerInput.isInputValid);
-                if (ImGui.Button(m_fields.Label("提交预览输入"))) { m_fields.Finish(); owner.HandleInput(new() { textConfirm = true }); }
+                if (ImGui.Button("Submit preview input")) { m_fields.Finish(); owner.HandleInput(new() { textConfirm = true }); }
                 ImGui.EndDisabled();
             }
         }

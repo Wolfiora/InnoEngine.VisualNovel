@@ -11,7 +11,7 @@ public static class ResourceInventoryRules
     /// <param name="use">The proven or unavailable closure category.</param>
     /// <returns>The current Simplified Chinese editor label.</returns>
     public static string DescribeUse(ResourceAuditUse use) => use switch
-    { ResourceAuditUse.Referenced => "已引用", ResourceAuditUse.NotReferenced => "当前游戏未引用", ResourceAuditUse.AuthoringOnly => "创作数据", _ => "无法判断" };
+    { ResourceAuditUse.Referenced => "Referenced", ResourceAuditUse.NotReferenced => "Not referenced by current game", ResourceAuditUse.AuthoringOnly => "Authoring data", _ => "Unknown" };
     /// <summary>Checks validated image/font/WAV and VN native source extensions; other used formats still enter through the native closure.</summary>
     /// <param name="path">The relative source path.</param>
     /// <returns>Whether the VN tool understands this candidate source category.</returns>

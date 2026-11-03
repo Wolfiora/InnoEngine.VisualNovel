@@ -49,7 +49,7 @@ internal static class UiWidgetContracts
     }
     private sealed class Values : UiDataSource
     {
-        public override bool TryRead(string path, out NovelValue value) { value = NovelValue.Boolean(true); return true; }
+        public override bool TryRead(string path, out NovelValue value) { value = path == "settings.textSpeed" ? NovelValue.Number(1) : NovelValue.Boolean(true); return true; }
         public override bool TryWrite(string path, NovelValue value) => true;
         public override IReadOnlyList<UiDataRow> ReadRows(string path) => [];
     }

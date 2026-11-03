@@ -6,7 +6,7 @@ using Inno.VisualNovel.Editor.Localization;
 
 namespace Inno.VisualNovel.Editor.StoryGraph;
 
-internal sealed class StoryGraphDebugView(EditorTextView text)
+internal sealed class StoryGraphDebugView()
 {
     internal void DrawNode(
         GraphCanvasView view,
@@ -27,7 +27,7 @@ internal sealed class StoryGraphDebugView(EditorTextView text)
         {
             draw.Rectangle(minimum - new Vector2(3), maximum + new Vector2(3), ImGui.ToPackedColor(new(1, .83f, .25f, 1)), 0, 3);
             draw.Text(new(minimum.X + 8, maximum.Y - 21), ImGui.ToPackedColor(new(1, .9f, .55f, 1)),
-                paused ? text.Localize("暂停位置") : text.Localize("运行位置"));
+                paused ? "Paused position" : "Execution position");
         }
         if (!breakpoint) return;
         float radius = 5 * view.zoom;

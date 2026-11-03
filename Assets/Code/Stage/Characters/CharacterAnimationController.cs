@@ -75,26 +75,8 @@ internal sealed class CharacterAnimationController
                 breathing = inverse * Matrix3x2.CreateScale(1, (float)scale, new((float)owner.pivotX, (float)owner.pivotY)) * basis;
             }
         }
-        if (!m_parts.TryGetValue(layer.id, out var track) || reducedMotion && !track.part.essential) return (image, breathing);
-        var part = track.part;
-        if (part.mode == CharacterAnimationMode.Talking)
-        {
-            if (!owner.speaking) return (image, breathing);
-            elapsed = Math.Max(0, Math.Round(time - owner.speechStarted, 9));
-        }
-        else elapsed += part.phase;
-        bool loop = part.mode != CharacterAnimationMode.Sequence || part.loop;
-        double cycle = track.duration + (part.mode == CharacterAnimationMode.Blink ? part.blinkInterval : 0);
-        if (!loop && elapsed >= cycle) return (part.frames[^1].texture, breathing);
-        double position = loop ? elapsed % cycle : elapsed;
-        if (cycle - position <= 1e-9) position = 0;
-        if (part.mode == CharacterAnimationMode.Blink)
-        {
-            if (position + 1e-9 < part.blinkInterval) return (image, breathing);
-            position -= part.blinkInterval;
-        }
-        double end = 0;
-        foreach (var frame in part.frames) { end += frame.seconds; if (position + 1e-9 < end) return (frame.texture, breathing); }
-        return (part.frames[^1].texture, breathing);
+        if (!m_parts.TryGetValue(layer.id, out var track)) return (image, breathing);
+        return (CharacterFrameSampler.Sample(track.part, elapsed, Math.Max(0, Math.Round(time - owner.speechStarted, 9)),
+            owner.speaking, image, reducedMotion), breathing);
     }
 }

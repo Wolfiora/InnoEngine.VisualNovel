@@ -28,7 +28,7 @@ public static class CharacterEditService
         if (character.poses.Length >= 256) throw new InvalidOperationException("A character supports at most 256 poses.");
         CharacterPose original = character.poses.Single(item => item.id == poseId);
         string id = Guid.NewGuid().ToString("N");
-        CharacterPose copy = original.Copy(); copy.id = id; copy.name += " 副本";
+        CharacterPose copy = original.Copy(); copy.id = id; copy.name += " Copy";
         character.poses = [.. character.poses, copy];
         return id;
     }

@@ -75,14 +75,14 @@ public sealed class NovelPublishReport
     /// <returns>A Markdown report suitable for the project's artifacts directory.</returns>
     public string ToMarkdown()
     {
-        var text = new StringBuilder("# VN 发布前检查\n\n");
-        text.Append("游戏：").Append(Cell(title)).Append("\n\n构建内容指纹：").Append(fingerprint.Length == 0 ? "未生成" : fingerprint).Append("\n\n");
-        text.Append(contentValid ? "内容检查通过。" : "存在阻止发布的内容错误。");
-        text.Append("本报告未执行 Windows 游戏构建、启动、图形、音频或实际输入验收。\n\n");
+        var text = new StringBuilder("# VN publishing preflight\n\n");
+        text.Append("Game: ").Append(Cell(title)).Append("\n\nContent fingerprint: ").Append(fingerprint.Length == 0 ? "Not generated" : fingerprint).Append("\n\n");
+        text.Append(contentValid ? "Content validation passed." : "Content errors prevent publishing.");
+        text.Append("This report does not perform a Windows game build, launch, graphics, audio or physical input acceptance.\n\n");
         foreach (PublishIssue item in issues)
             text.Append("- [").Append(item.level).Append("] ").Append(Cell(item.code)).Append(" · ").Append(Cell(item.location)).Append("：").Append(Cell(item.message)).Append('\n');
-        text.Append("\n资源数：").Append(assets.Count).Append("。属性字节为原生序列化数据量，不是导出包体积。最终资源、Shader 和目标能力以引擎构建报告为准。\n\n");
-        text.Append("| 资产 | 身份 | 属性字节 | 直接引用来源 |\n|---|---|---:|---|\n");
+        text.Append("\nResources: ").Append(assets.Count).Append(". Property bytes measure native serialized data, not package size. The engine build report determines final assets, shaders and target capabilities.\n\n");
+        text.Append("| Asset | Identity | Property bytes | Direct referrers |\n|---|---|---:|---|\n");
         foreach (PublishAsset item in assets)
             text.Append("| ").Append(Cell(item.path.ToString())).Append(" | ").Append(item.id).Append(" | ").Append(item.propertyBytes)
                 .Append(" | ").Append(Cell(string.Join("；", item.referrers))).Append(" |\n");

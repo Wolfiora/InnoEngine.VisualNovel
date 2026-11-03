@@ -67,7 +67,7 @@ public sealed class SaveSlotController : IDisposable
 
     /// <summary>Starts rebuilding slot metadata directly from complete packets.</summary>
     /// <returns>Whether a new operation was accepted.</returns>
-    public bool Refresh() => Begin(async () => new(await m_service.ListAsync(m_lifetime.Token)));
+    public bool Refresh() => Begin(async () => new(await m_service.ListAsync(m_lifetime.Token).ConfigureAwait(false)));
 
     /// <summary>Captures a stable game synchronously and starts an atomic save operation.</summary>
     /// <param name="slot">The bounded manual, automatic or quick slot.</param>
@@ -77,8 +77,8 @@ public sealed class SaveSlotController : IDisposable
         if (!canSave) return false;
         if (m_thumbnail is null) return Begin(async () =>
         {
-            await m_service.SaveAsync(slot, m_session, cancellationToken: m_lifetime.Token);
-            return new(await m_service.ListAsync(m_lifetime.Token));
+            await m_service.SaveAsync(slot, m_session, cancellationToken: m_lifetime.Token).ConfigureAwait(false);
+            return new(await m_service.ListAsync(m_lifetime.Token).ConfigureAwait(false));
         });
         try
         {
@@ -109,7 +109,7 @@ public sealed class SaveSlotController : IDisposable
     public bool Load(SaveSlot slot)
     {
         long revision = m_session.stateRevision;
-        return Begin(async () => new(m_slots, await m_service.ReadAsync(slot, m_lifetime.Token), revision));
+        return Begin(async () => new(m_slots, await m_service.ReadAsync(slot, m_lifetime.Token).ConfigureAwait(false), revision));
     }
 
     /// <summary>Deletes a selected slot and reconstructs metadata after durable completion.</summary>
@@ -117,8 +117,8 @@ public sealed class SaveSlotController : IDisposable
     /// <returns>Whether deletion started.</returns>
     public bool Delete(SaveSlot slot) => Begin(async () =>
     {
-        await m_service.DeleteAsync(slot, m_lifetime.Token);
-        return new(await m_service.ListAsync(m_lifetime.Token));
+        await m_service.DeleteAsync(slot, m_lifetime.Token).ConfigureAwait(false);
+        return new(await m_service.ListAsync(m_lifetime.Token).ConfigureAwait(false));
     });
 
     /// <summary>Commits a finished operation on the session owner thread; failures preserve the running game.</summary>
@@ -139,8 +139,8 @@ public sealed class SaveSlotController : IDisposable
                     byte[] image = capture.thumbnail.image.GetAwaiter().GetResult();
                     _ = Begin(async () =>
                     {
-                        await m_service.SaveSnapshotAsync(capture.slot, capture.state, image, m_lifetime.Token);
-                        return new(await m_service.ListAsync(m_lifetime.Token));
+                        await m_service.SaveSnapshotAsync(capture.slot, capture.state, image, m_lifetime.Token).ConfigureAwait(false);
+                        return new(await m_service.ListAsync(m_lifetime.Token).ConfigureAwait(false));
                     });
                 }
                 catch (Exception failure) when (failure is not OutOfMemoryException) { error = failure.Message; }
@@ -196,8 +196,8 @@ public sealed class SaveSlotController : IDisposable
         if (request.thumbnail is not null) { m_capturing = (slot, request.state, request.revision, request.thumbnail); return; }
         _ = Begin(async () =>
         {
-            await m_service.SaveSnapshotAsync(slot, request.state, cancellationToken: m_lifetime.Token);
-            return new(await m_service.ListAsync(m_lifetime.Token));
+            await m_service.SaveSnapshotAsync(slot, request.state, cancellationToken: m_lifetime.Token).ConfigureAwait(false);
+            return new(await m_service.ListAsync(m_lifetime.Token).ConfigureAwait(false));
         });
     }
 }

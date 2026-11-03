@@ -14,7 +14,7 @@ public static class CharacterVariantEditService
     {
         if (character.expressions.Length >= 1024) throw new InvalidOperationException("A character supports at most 1024 expressions.");
         string id = Guid.NewGuid().ToString("N");
-        character.expressions = [.. character.expressions, new() { id = id, name = "新表情" }];
+        character.expressions = [.. character.expressions, new() { id = id, name = "New expression" }];
         if (character.expressions.Length == 1) character.defaultExpression = id;
         return id;
     }
@@ -29,7 +29,7 @@ public static class CharacterVariantEditService
     ) {
         if (character.expressions.Length >= 1024) throw new InvalidOperationException("A character supports at most 1024 expressions.");
         var copy = character.expressions.Single(item => item.id == expressionId).Copy();
-        copy.id = Guid.NewGuid().ToString("N"); copy.name += " 副本";
+        copy.id = Guid.NewGuid().ToString("N"); copy.name += " Copy";
         character.expressions = [.. character.expressions, copy]; return copy.id;
     }
 

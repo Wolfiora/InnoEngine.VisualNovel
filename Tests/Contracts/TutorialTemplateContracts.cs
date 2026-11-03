@@ -113,6 +113,13 @@ internal static class TutorialTemplateContracts
             Check(assets.Import(path), "The selected headless host could not prepare its leaf dependency: " + path); preparedLeaves++;
         }
         Console.WriteLine("HOST PRECONDITION: explicitly prepared " + preparedLeaves + " incomplete leaf dependencies through the public host importer. Automatic cold-host reference hydration remains unverified.");
+        foreach (string shader in Directory.EnumerateFiles(Path.Combine(source, "BuiltIn", "Shaders"), "*", SearchOption.AllDirectories)
+            .Where(static path => Path.GetExtension(path) is ".ishadersource" or ".ishader").OrderBy(static path => path, StringComparer.Ordinal))
+        {
+            var path = AssetPath.Project(Path.GetRelativePath(source, shader).Replace('\\', '/'));
+            Check(assets.Import(path), "The headless host could not prepare its shader dependency: " + path);
+        }
+        Console.WriteLine("HOST PRECONDITION: prepared source and graph shader artifacts through the public importer before template creation.");
         foreach (var entry in Inno.VisualNovel.Authoring.BuiltInResources.BuiltInResourceCatalog.entries)
         {
             var loaded = Inno.VisualNovel.Authoring.BuiltInResources.BuiltInResourceLoader.Load(entry);

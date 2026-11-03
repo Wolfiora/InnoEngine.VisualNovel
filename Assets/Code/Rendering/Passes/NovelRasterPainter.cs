@@ -28,7 +28,26 @@ internal sealed class NovelRasterPainter(
         RenderClearColor color = default
     ) {
         var draws = quads.Select(quad => new Prepared(context.uploads.UploadBuffer(m_vertices, QuadBatchBuilder.Pack(quad, width, height), "VN quad"),
-            resources.Resolve(context.resourceService, quad.texture), quad.clip)).ToArray();
+            resources.Resolve(context.resourceService, quad.texture), quad.clip, 6)).ToArray();
+        return AddPrepared(draws, target, viewport, clear, color);
+    }
+    internal RasterPassBuilder AddMeshes(
+        IReadOnlyList<NovelDrawMesh> meshes,
+        RenderTextureHandle target,
+        RenderViewport viewport,
+        bool clear = false
+    ) {
+        var draws = meshes.Select(mesh => new Prepared(context.uploads.UploadBuffer(m_vertices, mesh.vertices, "Engine UI mesh"),
+            resources.Resolve(context.resourceService, mesh.texture), mesh.clip, mesh.vertexCount)).ToArray();
+        return AddPrepared(draws, target, viewport, clear, default);
+    }
+    private RasterPassBuilder AddPrepared(
+        Prepared[] draws,
+        RenderTextureHandle target,
+        RenderViewport viewport,
+        bool clear,
+        RenderClearColor color
+    ) {
         var data = new PaintData(material, draws, viewport, width, height);
         var pass = context.graph.AddRasterPass("VN Paint " + ++m_index, new("inno.vn.composition"), data, static (value, owner) =>
         {
@@ -43,7 +62,7 @@ internal sealed class NovelRasterPainter(
                 if (right <= x || bottom <= y) continue;
                 value.material.Bind(commands); commands.SetScissor(x, y, right - x, bottom - y);
                 commands.BindTexture(new("s_image"), draw.texture, RenderSamplerState.linearClamp);
-                commands.BindVertexBuffer(draw.vertices); commands.Draw(6);
+                commands.BindVertexBuffer(draw.vertices); commands.Draw(draw.count);
             }
         });
         Attach(pass, target, clear, color); return pass;
@@ -57,6 +76,6 @@ internal sealed class NovelRasterPainter(
         if (target.isValid) pass.UseColorAttachment(target, 0, clear ? RenderLoadAction.Clear : RenderLoadAction.Load, RenderStoreAction.Store, color);
         else { if (clear) pass.ClearPresentationTarget(color); pass.HasSideEffect(); }
     }
-    private sealed record Prepared(RenderBufferSlice vertices, PersistentTextureHandle texture, Rect clip);
+    private sealed record Prepared(RenderBufferSlice vertices, PersistentTextureHandle texture, Rect clip, int count);
     private sealed record PaintData(RenderMaterialPass material, Prepared[] draws, RenderViewport viewport, float width, float height);
 }

@@ -48,32 +48,32 @@ internal sealed class StoryPasteView(StoryInspectorFields fields)
         var declarations = draft.GetVariables().ToDictionary(static variable => variable.id, StringComparer.Ordinal);
         bool mandatory = m_review.chapterId != draft.chapterId && m_review.externalTargets.Count > 0 || m_variables.Conflicts(declarations);
         bool requested = m_requested; m_requested = false;
-        if (ImGui.Button(fields.Caption("粘贴所复制 " + m_review.nodeIds.Count + " 项", fields.Localize("粘贴所复制 ") + m_review.nodeIds.Count + fields.Localize(" 项"))) || requested)
+        if (ImGui.Button("Paste copied " + m_review.nodeIds.Count + " items") || requested)
         {
             fields.Finish();
             if (mandatory) m_open = true;
             else return Apply();
         }
-        ImGui.SameLine(); if (ImGui.SmallButton(fields.Caption(m_open ? "收起粘贴审阅" : "粘贴位置与目标…", m_open ? fields.Localize("收起粘贴审阅") : fields.Localize("粘贴位置与目标…")))) { fields.Finish(); m_open = !m_open; }
+        ImGui.SameLine(); if (ImGui.SmallButton(m_open ? "Close paste review" : "Paste location and targets…")) { fields.Finish(); m_open = !m_open; }
         if (!m_open) return null;
-        fields.Select("paste/fragment", fields.Localize("目标片段"), ref m_fragment, draft.fragments.Select(static fragment => (fragment.id, fragment.name)));
-        EditorUiSession.current.widgets.Hint(fields.Localize("内部节点、台词、选项和连线将获得新身份；只映射下列组外目标。未解析的外部目标明确保留为 Missing，粘贴后可从诊断和连接字段继续处理。"));
+        fields.Select("paste/fragment", "Destination fragment", ref m_fragment, draft.fragments.Select(static fragment => (fragment.id, fragment.name)));
+        EditorUiSession.current.widgets.Hint("Internal nodes, dialogue lines, choices and edges receive new identities. Only the external targets below are mapped. Unresolved external targets remain explicitly Missing; use diagnostics and connection fields to resolve them after pasting.");
         foreach (string target in m_review.externalTargets)
         {
             string mapped = m_targets[target];
-            if (fields.Select("paste/target/" + target, fields.Localize("组外目标 · ") + target, ref mapped,
-                new[] { (string.Empty, fields.Localize("保留为 Missing（不猜测目标）")) }.Concat(draft.graph.document.nodes.Where(static node => node.definitionId != StoryNodeIds.entry)
+            if (fields.Select("paste/target/" + target, "External target · " + target, ref mapped,
+                new[] { (string.Empty, "Keep as Missing (do not infer a target)") }.Concat(draft.graph.document.nodes.Where(static node => node.definitionId != StoryNodeIds.entry)
                     .Select(static node => (node.id.value, node.id.value))))) m_targets[target] = mapped;
         }
         m_variables.Draw(declarations);
-        if (!ImGui.Button(fields.Label("按以上位置与目标粘贴"))) return null;
+        if (!ImGui.Button("Paste with these locations and targets")) return null;
         fields.Finish(); return Apply();
 
         string[] Apply()
         {
             string[] created = []; var targets = m_targets.Where(static pair => pair.Value.Length > 0).ToDictionary(static pair => pair.Key, static pair => pair.Value, StringComparer.Ordinal);
             var variables = m_variables.Mappings();
-            documents.Edit(documents.activeDocumentId, fields.Localize("粘贴已审阅剧情组"), candidate => created = documents.clipboard.Paste(candidate, m_fragment, m_bytes, new(100, 100), targets, variables));
+            documents.Edit(documents.activeDocumentId, "Paste reviewed story group", candidate => created = documents.clipboard.Paste(candidate, m_fragment, m_bytes, new(100, 100), targets, variables));
             m_open = false; return created;
         }
     }

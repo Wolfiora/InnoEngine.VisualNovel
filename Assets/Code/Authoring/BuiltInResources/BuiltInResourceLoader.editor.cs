@@ -32,7 +32,7 @@ public static class BuiltInResourceLoader
             BuiltInResourceKind.Particle or BuiltInResourceKind.Transition or BuiltInResourceKind.ScreenEffect => BuiltInNovelAssets.Load<VisualEffectAsset>(entry.path),
             _ => throw new ArgumentOutOfRangeException(nameof(entry))
         };
-        if (asset.isMissing) throw new AuthoringValidationException($"内置资源缺失：{entry.path}");
+        if (asset.isMissing) throw new AuthoringValidationException($"Built-in resource is missing: {entry.path}");
         return asset;
     }
 }

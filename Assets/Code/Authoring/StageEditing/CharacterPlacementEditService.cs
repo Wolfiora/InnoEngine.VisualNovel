@@ -40,7 +40,7 @@ public static class CharacterPlacementEditService
         var result = initial.Copy();
         result.x += reference.x + reference.width * relativeX - bounds.x - bounds.width * anchorX;
         result.y += reference.y + reference.height * relativeY - bounds.y - bounds.height * anchorY;
-        if (!Finite(result.x) || !Finite(result.y)) throw new AuthoringValidationException($"站位超出支持的设计坐标范围。");
+        if (!Finite(result.x) || !Finite(result.y)) throw new AuthoringValidationException($"The placement exceeds the supported design-coordinate range.");
         return result;
     }
     private static bool Finite(double value) => double.IsFinite(value) && Math.Abs(value) <= 1e7;

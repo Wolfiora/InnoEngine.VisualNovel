@@ -11,7 +11,7 @@ namespace Inno.VisualNovel.Model.Interface;
 public sealed class ScreenAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing title.</summary>
-    [SerializableProperty] public string title { get; set; } = "新页面";
+    [SerializableProperty] public string title { get; set; } = "New screen";
     /// <summary>Gets or sets the logical canvas width.</summary>
     [SerializableProperty] public float width { get; set; } = 1920;
     /// <summary>Gets or sets the logical canvas height.</summary>

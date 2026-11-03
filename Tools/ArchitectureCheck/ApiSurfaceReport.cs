@@ -17,6 +17,18 @@ internal static class ApiSurfaceReport
         var types = metadata.TypeDefinitions.Select(handle => metadata.GetTypeDefinition(handle))
             .Where(type => (type.Attributes & TypeAttributes.VisibilityMask) is TypeAttributes.Public or TypeAttributes.NestedPublic).ToArray();
         Console.WriteLine("Selected formal scripting API: " + Path.GetFullPath(path));
+        foreach (string name in new[] { "IUiService", "UI", "UiContextOptions", "UiDocumentAsset", "UiRenderFrame", "UiEvent", "GameSystem", "GameScene", "GameObject", "GameComponent", "PrefabInstanceInfo", "PrefabAsset", "SceneAsset", "SceneEdits", "IEditorSceneWorkspace", "IEditorScenePlayMode", "EditorSceneWorkspaceFactory", "RuntimeSession", "SceneWorld", "EditorViewportContributor", "EditorViewportContribution", "EditorViewportContext", "EditorViewportManipulationSpace", "IEditorHistory", "IInspectionPropertyEditService" })
+        {
+            TypeDefinition[] matches = types.Where(type => metadata.GetString(type.Name) == name).ToArray();
+            Console.WriteLine("Native scene authoring boundary: " + name + ": " + (matches.Length == 0 ? "not exported" : "exported"));
+            foreach (TypeDefinition type in matches)
+            {
+                string[] methods = type.GetMethods().Select(handle => metadata.GetMethodDefinition(handle))
+                    .Where(method => (method.Attributes & MethodAttributes.MemberAccessMask) == MethodAttributes.Public)
+                    .Select(method => metadata.GetString(method.Name)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray();
+                Console.WriteLine(name + " public operations: " + string.Join(", ", methods));
+            }
+        }
         foreach (string name in new[] { "SerializationRegistry", "TypeCache", "TypeRegistry" })
             Console.WriteLine(name + ": " + (types.Any(type => metadata.GetString(type.Name) == name) ? "exported" : "not exported"));
         foreach (string name in new[] { "EditorDragDropRenderer", "EditorDropWidgetResult", "EditorDragData", "EditorDrop", "EditorInteraction", "ISceneReloadStateTransfer", "IEditorReloadParticipant" })

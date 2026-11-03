@@ -89,6 +89,6 @@
 
 `SaveService` 已实现原生数据包、100 个默认手动槽、3 个自动槽、1 个快存槽及候选读档。存档页每页十个槽位，区分手动/自动/快存；覆盖、删除、读档先确认，IO 错误保留当前游戏。`SaveSlotController` 只在 owner 线程 Poll 时应用读档；迟到读档不会替换已重启的游戏。自动槽位轮换已有服务逻辑，但剧情自动保存触发仍待接入。
 
-宿主可以在创建会话前调用 `NovelPlayerComponent.ConfigurePersistence(storage, codec)`；`NovelGameView` 也可接收匹配构建的 `SaveService`。需要宿主提供 `INovelStateCodec` 的 Runtime 原生实现后才能接入正式游戏文件存档；当前仅有 Editor 适配。存储和音频故障测试采用可控替身，未使用 JSON 或自制二进制旁路。
+宿主可以在创建会话前调用 `NovelSceneSystem.ConfigurePersistence(storage, codec)`；`NovelGameView` 也可接收匹配构建的 `SaveService`。需要宿主提供 `INovelStateCodec` 的 Runtime 原生实现后才能接入正式游戏文件存档；当前仅有 Editor 适配。存储和音频故障测试采用可控替身，未使用 JSON 或自制二进制旁路。
 
 安装包资源只读；修改前先通过正式资源机制创建项目副本。所有未完成项以仓库实施状态和功能矩阵为准。

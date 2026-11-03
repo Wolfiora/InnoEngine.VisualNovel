@@ -60,7 +60,7 @@ public sealed class NativeCharacterImagePreparation : IDisposable
                 if ((File.GetAttributes(absolute) & FileAttributes.ReparsePoint) != 0) throw new InvalidOperationException("The captured image became a link; choose an ordinary project source.");
                 TextureAsset image = Assets.Load<TextureAsset>(path);
                 string failure = image.isMissing || image.identity.persistentId == Guid.Empty || image.assetPath.localPath.Length == 0 || image.width <= 0 || image.height <= 0
-                    ? "原生图像未就绪；请在 File Browser 完成导入后重新准备。" : "";
+                    ? "The native image is not ready. Complete its import in File Browser and prepare again." : "";
                 m_inputs.Add(new(path, image, failure));
             }
             catch (Exception failure) when (failure is not OutOfMemoryException) { m_inputs.Add(new(path, null, failure.Message)); }

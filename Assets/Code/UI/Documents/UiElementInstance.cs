@@ -4,15 +4,18 @@ using Inno.VisualNovel.UI.Binding;
 
 namespace Inno.VisualNovel.UI.Documents;
 
-internal sealed class UiElementInstance(UiElementDefinition definition)
+internal sealed class UiElementInstance(UiElementDefinition definition) : Layout.UiLayoutBox
 {
+    public override UiLayoutDefinition layout => definition.layout;
+    public override UiElementKind kind => definition.kind;
+    public override float textPadding => definition.style.textPadding;
+    public override bool hasText => richText?.document.text.Length > 0 || text.Length > 0;
+    public override System.Collections.Generic.IReadOnlyList<Layout.UiLayoutBox> layoutChildren => children;
     internal UiElementDefinition definition { get; } = definition;
     internal string id = definition.id;
     internal UiDataRow? row;
     internal UiElementInstance? parent;
     internal string repeatedKeys = "\0";
-    internal Rect bounds;
-    internal Rect clip;
     internal Animation.UiElementAnimation animation = new();
     internal Matrix presentation = Matrix.identity;
     internal Rect visualBounds, visualClip, childClip;
@@ -28,17 +31,6 @@ internal sealed class UiElementInstance(UiElementDefinition definition)
     internal readonly Input.UiImageViewportController? imageViewport = definition.kind == UiElementKind.ImageViewport ? new() : null;
     internal readonly Controls.Inputs.UiTextInputController? textInput = definition.kind == UiElementKind.Input ? new() : null;
     internal bool enabled = true;
-    internal bool visible = true;
     internal bool behindStage;
-    internal float scroll;
-    internal bool followTail = true;
-    internal bool followEnd;
-    internal float previousContentHeight;
-    internal float revealHeight;
-    internal float visibleMeasuredHeight;
-    internal float contentVisibleHeight;
-    internal float contentHeight;
-    internal float measuredWidth;
-    internal float measuredHeight;
     internal UiElementInstance[] children = [];
 }

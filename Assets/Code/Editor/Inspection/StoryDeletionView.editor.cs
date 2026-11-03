@@ -36,7 +36,7 @@ internal sealed class StoryDeletionView(StoryInspectorFields fields)
     ) {
         if (m_document != documents.activeDocumentId) { m_review = null; return false; }
         if (m_review is not null && m_revision != documents.GetRevision(m_document))
-        { m_review = null; m_message = fields.Localize("文档已经变化，删除审阅已取消；请重新选择并预览。"); }
+        { m_review = null; m_message = "The document changed. Deletion review was cancelled; select the nodes and preview again."; }
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
         if (m_review is not { } review) return false;
         bool visible = ImGui.BeginChild("story-delete-review", Vector2.Zero, ImGuiChildFlags.Borders);
@@ -48,9 +48,9 @@ internal sealed class StoryDeletionView(StoryInspectorFields fields)
         StoryDraftState draft,
         StoryDeletionReview review
     ) {
-        ImGui.SeparatorText(fields.Localize("删除审阅 · ") + review.nodes.Count + fields.Localize(" 个节点 / ") + review.connections.Count + fields.Localize(" 条原连接"));
-        EditorUiSession.current.widgets.Hint(fields.Localize("单一路径保留可证明的后续；分支、汇合和循环必须明确改接或断开。变量声明和其他资源不会被删除。显式断开可能留下待修复出口，请在诊断通过后保存和运行。"));
-        if (ImGui.CollapsingHeader(fields.Label("查看全部受影响连接（分页）")))
+        ImGui.SeparatorText("Deletion review · " + review.nodes.Count + " nodes / " + review.connections.Count + " original connections");
+        EditorUiSession.current.widgets.Hint("A single path retains its unambiguous continuation. Branches, joins and loops require explicit reconnection or disconnection. Variable declarations and other resources are retained. Disconnected outputs may need repair; resolve diagnostics before saving and running.");
+        if (ImGui.CollapsingHeader("Review all affected connections (paged)"))
         {
             var page = Page("delete-edges", ref m_edgePage, review.connections.Count);
             for (int index = page.first; index < page.end; index++)
@@ -65,26 +65,26 @@ internal sealed class StoryDeletionView(StoryInspectorFields fields)
         {
             var input = review.inputs[index]; string target = m_targets[input.id]; bool disconnect = m_disconnect.Contains(input.id);
             ImGui.SeparatorText(input.output.nodeId.value + " / " + input.output.portId.value);
-            if (fields.Toggle("delete/disconnect/" + input.id.value, "明确断开这个来源", ref disconnect))
+            if (fields.Toggle("delete/disconnect/" + input.id.value, "Explicitly disconnect this source", ref disconnect))
             { if (disconnect) m_disconnect.Add(input.id); else m_disconnect.Remove(input.id); }
-            if (!disconnect && fields.Select("delete/target/" + input.id.value, fields.Localize("替代执行目标"), ref target,
-                new[] { (string.Empty, fields.Localize("选择目标（不会自动猜测）")) }.Concat(draft.graph.document.nodes.Where(node => !removed.Contains(node.id.value) && node.definitionId != StoryNodeIds.entry)
+            if (!disconnect && fields.Select("delete/target/" + input.id.value, "Replacement execution target", ref target,
+                new[] { (string.Empty, "Choose a target (no automatic inference)") }.Concat(draft.graph.document.nodes.Where(node => !removed.Contains(node.id.value) && node.definitionId != StoryNodeIds.entry)
                     .Select(static node => (node.id.value, node.id.value))))) m_targets[input.id] = target;
         }
         bool ready = review.inputs.All(input => m_disconnect.Contains(input.id) || m_targets[input.id].Length > 0);
-        if (!ready) EditorUiSession.current.widgets.Hint(fields.Localize("尚有 ") + review.inputs.Count(input => !m_disconnect.Contains(input.id) && m_targets[input.id].Length == 0) + fields.Localize(" 个来源需要明确选择；使用分页查看其余来源。"));
+        if (!ready) EditorUiSession.current.widgets.Hint("Remaining: " + review.inputs.Count(input => !m_disconnect.Contains(input.id) && m_targets[input.id].Length == 0) + " sources need an explicit choice. Use the pages to review the remaining sources.");
         ImGui.BeginDisabled(!ready);
         try
         {
-            if (ImGui.Button(fields.Label("应用以上连接并删除所选组")))
+            if (ImGui.Button("Apply these connections and delete the selected group"))
             {
                 fields.Finish(); var targets = review.inputs.ToDictionary(static input => input.id, input => m_disconnect.Contains(input.id) ? string.Empty : m_targets[input.id]);
-                documents.Edit(m_document, fields.Localize("删除已审阅剧情组"), candidate => documents.deletion.Apply(candidate, review, targets));
+                documents.Edit(m_document, "Delete reviewed story group", candidate => documents.deletion.Apply(candidate, review, targets));
                 m_review = null; return true;
             }
         }
         finally { ImGui.EndDisabled(); }
-        ImGui.SameLine(); if (ImGui.Button(fields.Label("取消删除"))) { fields.Finish(); m_review = null; }
+        ImGui.SameLine(); if (ImGui.Button("Cancel deletion")) { fields.Finish(); m_review = null; }
         return false;
     }
     private (int first, int end) Page(
@@ -94,11 +94,11 @@ internal sealed class StoryDeletionView(StoryInspectorFields fields)
     ) {
         int pages = Math.Max(1, (count + 19) / 20); page = Math.Clamp(page, 0, pages - 1);
         ImGui.BeginDisabled(page == 0);
-        try { if (ImGui.SmallButton(fields.Caption("上一页##" + id, fields.Localize("上一页##") + id))) page--; }
+        try { if (ImGui.SmallButton("Previous page##" + id)) page--; }
         finally { ImGui.EndDisabled(); }
-        ImGui.SameLine(); ImGui.Text((page + 1) + " / " + pages + " · " + count + fields.Localize(" 项"));
+        ImGui.SameLine(); ImGui.Text((page + 1) + " / " + pages + " · " + count + " items");
         ImGui.SameLine(); ImGui.BeginDisabled(page == pages - 1);
-        try { if (ImGui.SmallButton(fields.Caption("下一页##" + id, fields.Localize("下一页##") + id))) page++; }
+        try { if (ImGui.SmallButton("Next page##" + id)) page++; }
         finally { ImGui.EndDisabled(); }
         return (page * 20, Math.Min(count, (page + 1) * 20));
     }

@@ -13,6 +13,12 @@ internal static class UiLayoutContracts
 {
     internal static void MarginsFlowAndHitTesting()
     {
+        var toggle = Button("flag", 100, 50); toggle.kind = UiElementKind.Toggle; toggle.binding = "test.flag"; toggle.text = "启用";
+        var toggleData = new Data(); var toggleDocument = new UiDocumentInstance(Page(UiElementKind.Panel, 200, 100, toggle), Measure);
+        var off = toggleDocument.BuildFrame(toggleData).items.Single(item => item.id == "flag");
+        toggleData.flag = true;
+        var on = toggleDocument.BuildFrame(toggleData).items.Single(item => item.id == "flag");
+        Check(off.text == "启用" && off.progress == 0 && on.text == "启用" && on.progress == 1, "Checkbox presentation parsed a localized label instead of preserving the bound Boolean state.");
         var a = Button("a", 100, 40); a.layout.marginLeft = 10; a.layout.marginTop = 5; a.layout.marginRight = 20; a.layout.marginBottom = 15; a.layout.horizontalAlignment = UiAlignment.Center;
         var b = Button("b", 200, 30); b.layout.marginTop = 10; b.layout.horizontalAlignment = UiAlignment.End;
         var page = Page(UiElementKind.Vertical, 500, 300, a, b); page.root.layout.padding = 10; page.root.layout.gap = 10; page.root.layout.flowAlignment = UiFlowAlignment.SpaceBetween;
@@ -76,14 +82,18 @@ internal static class UiLayoutContracts
     ) => (text.Length * 10, 20);
     private sealed class Data : UiDataSource
     {
+        internal bool flag;
+        /// <inheritdoc />
         public override bool TryRead(
             string path,
             out NovelValue value
-        ) { value = NovelValue.Boolean(false); return false; }
+        ) { value = NovelValue.Boolean(flag); return path == "test.flag"; }
+        /// <inheritdoc />
         public override bool TryWrite(
             string path,
             NovelValue value
         ) => false;
+        /// <inheritdoc />
         public override IReadOnlyList<UiDataRow> ReadRows(string path) => [];
     }
     private static void Near(

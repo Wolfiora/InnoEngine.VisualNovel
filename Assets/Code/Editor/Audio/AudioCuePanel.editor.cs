@@ -12,7 +12,7 @@ using Inno.VisualNovel.Model.Audio;
 namespace Inno.VisualNovel.Editor.Audio;
 
 /// <summary>Creates and edits native audio cues over shared resource documents and engine History.</summary>
-[EditorPanel("inno.vn.audio", "VN 音频提示 · Audio Cues", order: 456, menuPath: "Authoring")]
+[EditorPanel("inno.vn.audio", "VN Audio Cues", order: 456, defaultOpen: false, menuPath: "Authoring")]
 public sealed class AudioCuePanel : EditorPanel, IEditorPanelReloadState
 {
     private readonly ResourceDocumentsModule m_documents;
@@ -42,7 +42,7 @@ public sealed class AudioCuePanel : EditorPanel, IEditorPanelReloadState
     {
         m_fields.BeginFrame();
         try { Draw(context.projectDirectory); }
-        catch (Exception error) when (error is not OutOfMemoryException) { m_message = m_fields.Error(error); }
+        catch (Exception error) when (error is not OutOfMemoryException) { m_message = (error).Message; }
         finally { m_fields.EndFrame(); }
         if (m_message.Length > 0) EditorUiSession.current.widgets.Hint(m_message);
     }
@@ -57,24 +57,24 @@ public sealed class AudioCuePanel : EditorPanel, IEditorPanelReloadState
     {
         AudioClipAsset? selected = NovelResourceSelection.Get<AudioClipAsset>(m_interactions);
         Func<AudioCueAsset>? create = selected is null ? null : () => new() { resourceId = "audio-" + Guid.NewGuid().ToString("N"), title = selected.name, clip = selected };
-        EditorUiSession.current.widgets.Hint(m_fields.Localize("在 File Browser 选择导入的音频创建提示；选择 .ivnaudio 可打开已有提示。语音请设为 Voice 并关闭循环。"));
-        if (!m_toolbar.Draw("音频提示", ".ivnaudio", create, out AudioCueAsset? cue) || cue is null) { m_audition.Stop(); return; }
+        EditorUiSession.current.widgets.Hint("Select imported audio in File Browser to create a cue, or select an .ivnaudio asset to edit one. For dialogue voice, choose Voice and turn looping off.");
+        if (!m_toolbar.Draw("Audio cue", ".ivnaudio", create, out AudioCueAsset? cue) || cue is null) { m_audition.Stop(); return; }
         string title = cue.title, author = cue.author, id = cue.resourceId;
         double gain = cue.volume, fadeIn = cue.fadeIn, fadeOut = cue.fadeOut;
         bool loop = cue.loop; NovelAudioChannel channel = cue.channel;
-        bool changed = m_fields.Text("audio/title", m_fields.Localize("标题"), ref title); cue.title = title;
-        changed |= m_fields.Text("audio/author", m_fields.Localize("作者 / 来源"), ref author); cue.author = author;
-        changed |= m_fields.Text("audio/id", m_fields.Localize("剧情资源 ID"), ref id); cue.resourceId = id;
-        changed |= m_fields.SelectEnum("audio/channel", "混音分类", ref channel); cue.channel = channel;
-        changed |= m_fields.Toggle("audio/loop", "循环", ref loop); cue.loop = loop;
-        changed |= m_fields.Number("audio/gain", m_fields.Localize("音量"), ref gain, 0, 1); cue.volume = gain;
-        changed |= m_fields.Number("audio/fade-in", m_fields.Localize("淡入秒数"), ref fadeIn, 0, 3600); cue.fadeIn = fadeIn;
-        changed |= m_fields.Number("audio/fade-out", m_fields.Localize("淡出秒数"), ref fadeOut, 0, 3600); cue.fadeOut = fadeOut;
-        ImGui.Text(m_fields.Localize("音频：") + (cue.clip?.name ?? m_fields.Localize("未分配")) + " · " + (cue.clip?.duration.ToString() ?? "—"));
+        bool changed = m_fields.Text("audio/title", "Title", ref title); cue.title = title;
+        changed |= m_fields.Text("audio/author", "Author / source", ref author); cue.author = author;
+        changed |= m_fields.Text("audio/id", "Story resource ID", ref id); cue.resourceId = id;
+        changed |= m_fields.SelectEnum("audio/channel", "Mixer category", ref channel); cue.channel = channel;
+        changed |= m_fields.Toggle("audio/loop", "Loop", ref loop); cue.loop = loop;
+        changed |= m_fields.Number("audio/gain", "Volume", ref gain, 0, 1); cue.volume = gain;
+        changed |= m_fields.Number("audio/fade-in", "Fade-in duration (seconds)", ref fadeIn, 0, 3600); cue.fadeIn = fadeIn;
+        changed |= m_fields.Number("audio/fade-out", "Fade-out duration (seconds)", ref fadeOut, 0, 3600); cue.fadeOut = fadeOut;
+        ImGui.Text("Audio: " + (cue.clip?.name ?? "Unassigned") + " · " + (cue.clip?.duration.ToString() ?? "—"));
         m_audition.Draw(cue);
-        if (selected is not null && ImGui.Button(m_fields.Label("替换为所选音频"))) { m_fields.Finish(); cue.clip = selected; changed = true; }
+        if (selected is not null && ImGui.Button("Replace with selected audio")) { m_fields.Finish(); cue.clip = selected; changed = true; }
         if (m_waveform.Draw(projectDirectory, cue.clip) is { } trimmed) { m_fields.Finish(); cue.clip = trimmed; changed = true; }
-        if (changed) m_documents.Edit<AudioCueAsset>(m_toolbar.documentId, m_fields.Localize("编辑音频提示"), candidate =>
+        if (changed) m_documents.Edit<AudioCueAsset>(m_toolbar.documentId, "Edit audio cue", candidate =>
         { candidate.resourceId = cue.resourceId; candidate.title = cue.title; candidate.author = cue.author; candidate.clip = cue.clip;
             candidate.channel = cue.channel; candidate.volume = cue.volume; candidate.loop = cue.loop; candidate.fadeIn = cue.fadeIn; candidate.fadeOut = cue.fadeOut; }, m_fields.mergeKey);
     }

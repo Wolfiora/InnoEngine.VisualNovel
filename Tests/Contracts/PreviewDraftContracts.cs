@@ -107,10 +107,7 @@ internal static class PreviewDraftContracts
             Check(!cancelled.Advance(1, 1000) && cancelled.capturedSources == 0 && cancelled.result is null,
                 "Beginning bounded preparation eagerly scanned the native resource closure.");
             string phase = cancelled.progress;
-            var progress = cancelled.progressMessage;
-            Check(progress.Format == "捕获资源 · {0}" && progress.ArgumentCount == 1, "Preparation progress merged source paths into its localization identity.");
-            progress.GetArguments()[0] = "Changed presentation argument";
-            Check(cancelled.progress == phase, "A progress formatter changed owner-local preparation state.");
+            Check(phase.StartsWith("Capturing resource · ", StringComparison.Ordinal), "Preparation did not report its English phase and authored source path.");
             Check(!cancelled.Advance(1, 1000) && cancelled.capturedSources == 1 && cancelled.result is null,
                 "One bounded preparation step consumed multiple source captures or published a partial project.");
             cancelled.Cancel();

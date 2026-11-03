@@ -14,11 +14,11 @@ public static class ExtensionStoryTemplate
     /// <returns>The explicit generation-neutral authoring contract.</returns>
     public static NovelCommandDefinition Definition() => new()
     {
-        id = "sample.delay-score", title = "延时返回分数", help = "等待逻辑时间后返回类型化 Integer 结果，可保存与回滚。",
+        id = "sample.delay-score", title = "Delayed score", help = "Returns an Integer after a logical delay; supports saving and rollback.",
         capabilities = CommandCapabilities.Preview | CommandCapabilities.Save | CommandCapabilities.Rollback | CommandCapabilities.Cancel,
         hasResult = true, resultDefault = NovelValue.Integer(0), parameters = [
-            new() { id = "seconds", label = "等待秒数", defaultValue = NovelValue.Number(1) },
-            new() { id = "score", label = "返回分数", defaultValue = NovelValue.Integer(10) }]
+            new() { id = "seconds", label = "Wait seconds", defaultValue = NovelValue.Number(1) },
+            new() { id = "score", label = "Returned score", defaultValue = NovelValue.Integer(10) }]
     };
     /// <summary>Creates a real typed command invocation with result and cancellation paths.</summary>
     /// <param name="codec">The native node settings codec.</param>

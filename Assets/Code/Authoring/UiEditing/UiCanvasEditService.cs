@@ -22,9 +22,9 @@ public static class UiCanvasEditService
         if (!Finite(bounds.x) || !Finite(bounds.y) || !Finite(bounds.width) || !Finite(bounds.height) || bounds.width <= 0 || bounds.height <= 0)
             throw new ArgumentException("Canvas gestures require finite positive measured bounds.", nameof(bounds));
         var rows = ScreenEditService.Flatten(screen); var row = rows.Single(item => item.element.id == elementId);
-        if (row.parent?.kind != UiElementKind.Panel) throw new AuthoringValidationException($"绝对定位的 Panel 子元素可以在画布移动；自动布局请调整容器、顺序或尺寸。");
+        if (row.parent?.kind != UiElementKind.Panel) throw new AuthoringValidationException($"Move absolutely positioned Panel children on the canvas. For automatic layouts, edit the container, order or size.");
         for (UiElementDefinition? ancestor = row.parent; ancestor is not null; ancestor = rows.Single(item => ReferenceEquals(item.element, ancestor)).parent)
-            if (ancestor.repeatBinding.Length > 0) throw new AuthoringValidationException($"重复行使用声明模板布局，请在模板属性中编辑，不能拖动生成的单独条目。");
+            if (ancestor.repeatBinding.Length > 0) throw new AuthoringValidationException($"Repeated rows use template layout. Edit the template properties instead of dragging an individual generated item.");
         return new(screen.root.id, row.element, row.parent.id, bounds);
     }
     /// <summary>Applies a relative move or edge resize from the frozen gesture origin without accumulating frame rounding.</summary>
@@ -54,10 +54,10 @@ public static class UiCanvasEditService
             || layout.marginLeft != initial.marginLeft || layout.marginTop != initial.marginTop || layout.marginRight != initial.marginRight || layout.marginBottom != initial.marginBottom
             || layout.horizontalAlignment != initial.horizontalAlignment || layout.verticalAlignment != initial.verticalAlignment
             || layout.minWidth != initial.minWidth || layout.minHeight != initial.minHeight || layout.maxWidth != initial.maxWidth || layout.maxHeight != initial.maxHeight)
-            throw new AuthoringValidationException($"布局约束或父元素已经变化，请重新开始画布手势。");
+            throw new AuthoringValidationException($"Layout constraints or the parent changed. Restart the canvas gesture.");
         bool horizontal = (edges & (UiResizeEdges.Left | UiResizeEdges.Right)) != 0, vertical = (edges & (UiResizeEdges.Top | UiResizeEdges.Bottom)) != 0;
         if (horizontal && layout.widthMode != UiSizeMode.Fixed || vertical && layout.heightMode != UiSizeMode.Fixed)
-            throw new AuthoringValidationException($"缩放该方向前，请在尺寸属性中选择 Fixed；内容和填充尺寸由布局计算。");
+            throw new AuthoringValidationException($"Choose Fixed for this dimension before resizing it. Content and Fill sizes are calculated by layout.");
         float left = start.bounds.x, top = start.bounds.y, right = left + start.bounds.width, bottom = top + start.bounds.height;
         if (edges == UiResizeEdges.None) { left = Snap(left + deltaX, grid); top = Snap(top + deltaY, grid); }
         else
@@ -73,7 +73,7 @@ public static class UiCanvasEditService
         if (edges.HasFlag(UiResizeEdges.Top)) top = bottom - height;
         float x = initial.x + left - start.bounds.x + (width - start.bounds.width) * initial.pivotX;
         float y = initial.y + top - start.bounds.y + (height - start.bounds.height) * initial.pivotY;
-        if (!Finite(x) || !Finite(y) || !Finite(width) || !Finite(height)) throw new AuthoringValidationException($"画布变换超出支持的逻辑坐标范围。");
+        if (!Finite(x) || !Finite(y) || !Finite(width) || !Finite(height)) throw new AuthoringValidationException($"The canvas transform exceeds the supported logical-coordinate range.");
         layout.x = x; layout.y = y;
         if (horizontal) layout.width = width;
         if (vertical) layout.height = height;

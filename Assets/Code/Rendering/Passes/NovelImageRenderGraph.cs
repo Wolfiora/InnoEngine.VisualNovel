@@ -51,6 +51,7 @@ internal sealed class NovelImageRenderGraph
         switch (plan)
         {
             case NovelPaintImage paint: m_painter.Add(paint.quads, target, viewport, true); break;
+            case NovelMeshImage mesh: m_painter.AddMeshes(mesh.meshes, target, viewport, true); break;
             case NovelStackImage stack:
                 if (stack.layers.Count == 0) m_painter.Add([], target, viewport, true);
                 for (int index = 0; index < stack.layers.Count; index++)

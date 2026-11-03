@@ -31,7 +31,7 @@ public sealed class StoryFlowTemplates
     ) {
         if (count < 0 || count > 1000000 || !float.IsFinite(position.x) || !float.IsFinite(position.y)) throw new ArgumentException("The counted loop needs a finite origin and a count between zero and one million.");
         string variable = "loop/" + Guid.NewGuid().ToString("N");
-        draft.variables = [.. draft.variables, new() { id = variable, name = "循环计数", scope = VariableScope.Local, initialValue = NovelValue.Integer(0) }];
+        draft.variables = [.. draft.variables, new() { id = variable, name = "Loop counter", scope = VariableScope.Local, initialValue = NovelValue.Integer(0) }];
         GraphNodeId initialize = m_edits.Add(draft, fragmentId, StoryNodeIds.assign, new AssignmentNode { variableId = variable, value = new() { literal = NovelValue.Integer(0) } }, position);
         GraphNodeId condition = m_edits.Add(draft, fragmentId, StoryNodeIds.condition, new ConditionNode { condition = new() { operation = ExpressionOperation.Less,
             operands = [new() { operation = ExpressionOperation.Variable, variableId = variable }, new() { literal = NovelValue.Integer(count) }] } }, new(position.x + 260, position.y));

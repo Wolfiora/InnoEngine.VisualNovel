@@ -36,15 +36,15 @@ internal sealed class FlowNodeSettingsView(
             case StoryNodeIds.log:
                 var log = documents.codec.Read<Model.Story.Nodes.Debugging.LogNode>(node);
                 string message = log.message; var level = log.level; bool previewOnly = log.previewOnly;
-                bool logChanged = fields.MultilineText(id + "/log-message", fields.Localize("日志（支持 {变量标识}）"), ref message);
-                logChanged |= fields.SelectEnum(id + "/log-level", "日志级别", ref level);
-                logChanged |= fields.Toggle(id + "/log-preview", "仅在预览输出", ref previewOnly);
+                bool logChanged = fields.MultilineText(id + "/log-message", "Log message (supports {variable-id})", ref message);
+                logChanged |= fields.SelectEnum(id + "/log-level", "Log level", ref level);
+                logChanged |= fields.Toggle(id + "/log-preview", "Preview output only", ref previewOnly);
                 if (logChanged)
                 {
                     log.message = message; log.level = level; log.previewOnly = previewOnly;
-                    documents.Edit(documents.activeDocumentId, fields.Localize("编辑剧情日志"), candidate => documents.edits.SetSettings(candidate, node.id, log), fields.mergeKey);
+                    documents.Edit(documents.activeDocumentId, "Edit story log", candidate => documents.edits.SetSettings(candidate, node.id, log), fields.mergeKey);
                 }
-                EditorUiSession.current.widgets.Hint(fields.Localize("沿用引擎 Console；消息附带原始章节与节点标识。Error 级别只记录；停止执行请使用断言。回滚重走该指令会再次记录。"));
+                EditorUiSession.current.widgets.Hint("Messages use the engine Console and include the original chapter and node IDs. Error severity only logs; use an assertion to stop execution. Replaying this instruction after rollback logs it again.");
                 break;
             case StoryNodeIds.system: m_system.Draw(documents, node); break;
             case StoryNodeIds.parallel:
@@ -53,12 +53,12 @@ internal sealed class FlowNodeSettingsView(
             case StoryNodeIds.unlock:
                 UnlockNode unlock = documents.codec.Read<UnlockNode>(node);
                 string entryId = unlock.entryId;
-                if (fields.Text(id + "/unlock", fields.Localize("收藏条目 ID"), ref entryId))
+                if (fields.Text(id + "/unlock", "Collection entry ID", ref entryId))
                 {
                     unlock.entryId = entryId;
-                    documents.Edit(documents.activeDocumentId, fields.Localize("编辑收藏解锁"), state => documents.edits.SetSettings(state, node.id, unlock), fields.mergeKey);
+                    documents.Edit(documents.activeDocumentId, "Edit collection unlock", state => documents.edits.SetSettings(state, node.id, unlock), fields.mergeKey);
                 }
-                EditorUiSession.current.widgets.Hint(fields.Localize("解锁属于全局进度，读档或回滚不会撤销。可在 VN 收藏中查看条目标识。"));
+                EditorUiSession.current.widgets.Hint("Unlocks belong to global progress and are retained after loading or rollback. Find entry IDs in VN Collections.");
                 break;
             case StoryNodeIds.stage: m_stage.Draw(documents, draft, node); break;
             case StoryNodeIds.audio: m_audio.Draw(documents, node); break;
@@ -69,64 +69,64 @@ internal sealed class FlowNodeSettingsView(
             case StoryNodeIds.wait:
                 WaitNode wait = documents.codec.Read<WaitNode>(node);
                 double seconds = wait.seconds; bool input = wait.waitForInput;
-                bool waitChanged = fields.Toggle(id + "/input", fields.Localize("等待玩家推进"), ref input);
-                if (!input) waitChanged |= fields.Number(id + "/seconds", fields.Localize("等待秒数"), ref seconds, 0);
+                bool waitChanged = fields.Toggle(id + "/input", "Wait for player advance", ref input);
+                if (!input) waitChanged |= fields.Number(id + "/seconds", "Wait duration (seconds)", ref seconds, 0);
                 if (waitChanged)
                 {
                     wait.seconds = seconds; wait.waitForInput = input;
-                    documents.Edit(documents.activeDocumentId, fields.Localize("编辑等待"), state => documents.edits.SetSettings(state, node.id, wait), fields.mergeKey);
+                    documents.Edit(documents.activeDocumentId, "Edit wait", state => documents.edits.SetSettings(state, node.id, wait), fields.mergeKey);
                 }
                 break;
             case StoryNodeIds.call:
                 CallNode call = documents.codec.Read<CallNode>(node);
                 string entry = call.entryId;
                 string chapter = call.chapterId;
-                bool changedCall = fields.Text(id + "/chapter", fields.Localize("目标章节（空为本章）"), ref chapter);
-                changedCall |= chapter.Length == 0 ? fields.Select(id + "/entry", fields.Localize("调用入口"), ref entry, draft.entries.Select(static item => (item.id, item.id)))
-                    : fields.Text(id + "/entry", fields.Localize("公开入口 ID"), ref entry);
+                bool changedCall = fields.Text(id + "/chapter", "Target chapter (empty for this chapter)", ref chapter);
+                changedCall |= chapter.Length == 0 ? fields.Select(id + "/entry", "Called entry", ref entry, draft.entries.Select(static item => (item.id, item.id)))
+                    : fields.Text(id + "/entry", "Public entry ID", ref entry);
                 if (changedCall)
                 {
                     call.entryId = entry; call.chapterId = chapter;
-                    documents.Edit(documents.activeDocumentId, fields.Localize("编辑片段调用"), state => documents.edits.SetSettings(state, node.id, call));
+                    documents.Edit(documents.activeDocumentId, "Edit fragment call", state => documents.edits.SetSettings(state, node.id, call));
                 }
-                if (call.jump) EditorUiSession.current.widgets.Hint(fields.Localize("此指令直接跳转，不增加返回地址。"));
-                else if (ImGui.Button(fields.Caption("改为跳转（删除返回连接）##" + id, fields.Localize("改为跳转（删除返回连接）##") + id)))
+                if (call.jump) EditorUiSession.current.widgets.Hint("This instruction jumps directly without adding a return address.");
+                else if (ImGui.Button("Change to jump (remove return connection)##" + id))
                 {
                     fields.Finish(); call.jump = true;
-                    documents.Edit(documents.activeDocumentId, fields.Localize("改为跳转并移除返回连接"), state => documents.edits.SetSettings(state, node.id, call, true));
+                    documents.Edit(documents.activeDocumentId, "Change to jump and remove return connection", state => documents.edits.SetSettings(state, node.id, call, true));
                 }
-                if (call.jump && ImGui.Button(fields.Caption("改为调用（需要连接 next）##" + id, fields.Localize("改为调用（需要连接 next）##") + id)))
+                if (call.jump && ImGui.Button("Change to call (requires a next connection)##" + id))
                 {
                     fields.Finish(); call.jump = false;
-                    documents.Edit(documents.activeDocumentId, fields.Localize("改为调用"), state => documents.edits.SetSettings(state, node.id, call));
+                    documents.Edit(documents.activeDocumentId, "Change to call", state => documents.edits.SetSettings(state, node.id, call));
                 }
                 break;
             case StoryNodeIds.condition:
             case StoryNodeIds.assertion:
                 ConditionNode condition = documents.codec.Read<ConditionNode>(node);
                 if (m_expressions.Draw(id + "/condition", condition.condition, draft.GetVariables()))
-                    documents.Edit(documents.activeDocumentId, fields.Localize("编辑条件"), state => documents.edits.SetSettings(state, node.id, condition), fields.mergeKey);
+                    documents.Edit(documents.activeDocumentId, "Edit condition", state => documents.edits.SetSettings(state, node.id, condition), fields.mergeKey);
                 break;
             case StoryNodeIds.assign:
                 AssignmentNode assignment = documents.codec.Read<AssignmentNode>(node);
                 string variable = assignment.variableId;
-                bool changed = fields.Select(id + "/variable", fields.Localize("写入变量"), ref variable, draft.GetVariables().Select(static item => (item.id, item.name + " · " + item.id)));
+                bool changed = fields.Select(id + "/variable", "Write to variable", ref variable, draft.GetVariables().Select(static item => (item.id, item.name + " · " + item.id)));
                 assignment.variableId = variable;
                 changed |= m_expressions.Draw(id + "/value", assignment.value, draft.GetVariables());
                 if (changed)
-                    documents.Edit(documents.activeDocumentId, fields.Localize("编辑变量赋值"), state => documents.edits.SetSettings(state, node.id, assignment), fields.mergeKey);
+                    documents.Edit(documents.activeDocumentId, "Edit variable assignment", state => documents.edits.SetSettings(state, node.id, assignment), fields.mergeKey);
                 break;
             case StoryNodeIds.random:
                 Random(documents, draft, node);
                 break;
             case StoryNodeIds.entry:
-                EditorUiSession.current.widgets.Hint(fields.Localize("入口按 next 连接进入剧情。可在章节结构中为此节点注册公开入口。"));
+                EditorUiSession.current.widgets.Hint("The entry follows its next connection into the story. Register a public entry for this node in chapter structure.");
                 break;
             case StoryNodeIds.end:
-                EditorUiSession.current.widgets.Hint(fields.Localize("结束当前故事会话。"));
+                EditorUiSession.current.widgets.Hint("End the current story session.");
                 break;
             case StoryNodeIds.returnFromCall:
-                EditorUiSession.current.widgets.Hint(fields.Localize("返回调用点的 next 连接，并恢复调用方的局部变量。"));
+                EditorUiSession.current.widgets.Hint("Return through the caller's next connection and restore the caller's local variables.");
                 break;
         }
     }
@@ -143,23 +143,23 @@ internal sealed class FlowNodeSettingsView(
         {
             string id = node.id + "/" + branch.id;
             double weight = branch.weight;
-            changed |= fields.Number(id + "/weight", fields.Localize("权重 ") + branch.id, ref weight, double.Epsilon);
+            changed |= fields.Number(id + "/weight", "Weight " + branch.id, ref weight, double.Epsilon);
             branch.weight = weight;
-            if (ImGui.Button(fields.Caption("删除分支…##" + id, fields.Localize("删除分支…##") + id))) { fields.Finish(); m_remove = id; }
+            if (ImGui.Button("Remove branch…##" + id)) { fields.Finish(); m_remove = id; }
             if (m_remove != id) continue;
-            string target = draft.graph.document.edges.FirstOrDefault(edge => edge.output.nodeId == node.id && edge.output.portId.value == branch.id)?.input.nodeId.value ?? "无连接";
-            EditorUiSession.current.widgets.Hint(fields.Localize("将移除分支输出 → ") + target);
-            if (ImGui.Button(fields.Caption("确认删除分支及其连接##" + id, fields.Localize("确认删除分支及其连接##") + id))) { fields.Finish(); remove = branch.id; m_remove = string.Empty; }
+            string target = draft.graph.document.edges.FirstOrDefault(edge => edge.output.nodeId == node.id && edge.output.portId.value == branch.id)?.input.nodeId.value ?? "No connection";
+            EditorUiSession.current.widgets.Hint("Branch output to remove → " + target);
+            if (ImGui.Button("Remove branch and its connection##" + id)) { fields.Finish(); remove = branch.id; m_remove = string.Empty; }
             ImGui.SameLine();
-            if (ImGui.Button(fields.Caption("取消##" + id, fields.Localize("取消##") + id))) m_remove = string.Empty;
+            if (ImGui.Button("Cancel##" + id)) m_remove = string.Empty;
         }
         if (remove.Length > 0) { random.branches = random.branches.Where(item => item.id != remove).ToArray(); changed = true; }
-        if (ImGui.Button(fields.Caption("添加随机分支##" + node.id, fields.Localize("添加随机分支##") + node.id)))
+        if (ImGui.Button("Add random branch##" + node.id))
         {
             fields.Finish();
             random.branches = [.. random.branches, new() { id = Guid.NewGuid().ToString("N") }]; changed = true;
         }
         if (changed)
-            documents.Edit(documents.activeDocumentId, fields.Localize("编辑随机分支"), state => documents.edits.SetSettings(state, node.id, random, remove.Length > 0), fields.mergeKey);
+            documents.Edit(documents.activeDocumentId, "Edit random branch", state => documents.edits.SetSettings(state, node.id, random, remove.Length > 0), fields.mergeKey);
     }
 }

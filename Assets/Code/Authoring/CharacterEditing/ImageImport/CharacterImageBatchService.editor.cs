@@ -43,10 +43,10 @@ public static class CharacterImageBatchService
             string failure = input.error;
             if (failure.Length == 0 && (kind == CharacterImageBatchKind.Unmatched || string.IsNullOrWhiteSpace(variant) || string.IsNullOrWhiteSpace(part)
                 || variant != variant.Trim() || part != part.Trim() || variant.Length > 256 || part.Length > 256))
-                failure = "文件名应为 pose__姿势名__部位名 或 expression__表情名__部位名。";
+                failure = "Use pose__pose-name__part-name or expression__expression-name__part-name as the file name.";
             if (failure.Length == 0 && (input.image is null || input.image.isMissing || input.image.identity.persistentId == Guid.Empty
                 || input.image.assetPath != input.path || input.image.width <= 0 || input.image.height <= 0))
-                failure = "原生图像未就绪，或导入路径/身份与审核来源不同。";
+                failure = "The native image is not ready, or its imported path or identity differs from the reviewed source.";
             if (failure.Length == 0)
             {
                 try
@@ -55,7 +55,7 @@ public static class CharacterImageBatchService
                     if (!groups.TryGetValue(key, out var group)) groups.Add(key, group = ResolveGroup(source, kind, variant, createVariants));
                     string partId = ResolvePart(source, group, part);
                     row = row with { variantId = group.id, partId = partId, createsVariant = group.created, applicable = true,
-                        message = group.created ? "可用：创建命名变体并设置图像。" : "可用：替换匹配部位的图像。" };
+                        message = group.created ? "Ready: create the named variant and assign the image." : "Ready: replace the matched part image." };
                 }
                 catch (InvalidOperationException error) { failure = error.Message; }
             }
@@ -67,7 +67,7 @@ public static class CharacterImageBatchService
         {
             var item = rows[index];
             if (item.row.applicable && duplicates.Contains((item.row.kind, item.row.variantId, item.row.partId)))
-                rows[index] = (item.row with { applicable = false, message = "冲突：多个图像匹配同一变体/部位，全部保留原值。" }, item.image);
+                rows[index] = (item.row with { applicable = false, message = "Conflict: multiple images match the same variant and part. Existing values are retained." }, item.image);
         }
         RejectExcess(CharacterImageBatchKind.Pose, source.poses.Length, 256);
         RejectExcess(CharacterImageBatchKind.Expression, source.expressions.Length, 1024);
@@ -117,7 +117,7 @@ public static class CharacterImageBatchService
             {
                 var item = rows[index];
                 if (item.row.applicable && item.row.createsVariant && item.row.kind == kind)
-                    rows[index] = (item.row with { applicable = false, message = "创建的变体超过数量预算；请拆分批次或移除未使用变体。" }, item.image);
+                    rows[index] = (item.row with { applicable = false, message = "The new variants exceed the count budget. Split the batch or remove unused variants." }, item.image);
             }
         }
     }
@@ -148,9 +148,9 @@ public static class CharacterImageBatchService
             : source.expressions.Select(static item => (item.id, item.name)).ToArray();
         var matches = options.Where(item => Same(name, item.id)).Select(static item => item.id).ToArray();
         if (matches.Length == 0) matches = options.Where(item => item.name.Length > 0 && Same(name, item.name)).Select(static item => item.id).ToArray();
-        if (matches.Length > 1) throw new AuthoringValidationException($"变体名称不唯一；请在文件名中使用稳定 ID 或先重命名。");
+        if (matches.Length > 1) throw new AuthoringValidationException($"The variant name is ambiguous. Use its stable ID in the filename or rename the variants first.");
         if (matches.Length == 1) return new(kind, matches[0], false);
-        if (!create) throw new AuthoringValidationException($"变体未匹配；先创建变体，或明确允许此批次创建命名变体。");
+        if (!create) throw new AuthoringValidationException($"No matching variant was found. Create it first or explicitly allow this batch to create named variants.");
         return new(kind, Guid.NewGuid().ToString("N"), true);
     }
     private static string ResolvePart(
@@ -163,9 +163,9 @@ public static class CharacterImageBatchService
             : source.poses.SelectMany(static pose => pose.parts)).ToArray();
         string[] matches = parts.Where(part => Same(name, part.id)).Select(static part => part.id).Distinct(StringComparer.Ordinal).ToArray();
         if (matches.Length == 0) matches = parts.Where(part => part.name.Length > 0 && Same(name, part.name)).Select(static part => part.id).Distinct(StringComparer.Ordinal).ToArray();
-        if (matches.Length != 1) throw new AuthoringValidationException(matches.Length == 0 ? (FormattableString)$"部位未匹配；先在角色中建立共享部位并命名。" : (FormattableString)$"部位名称不唯一；请使用稳定 ID 或先重命名。");
+        if (matches.Length != 1) throw new AuthoringValidationException(matches.Length == 0 ? (FormattableString)$"No matching part was found. Create and name the character's shared part first." : (FormattableString)$"The part name is ambiguous. Use its stable ID or rename the parts first.");
         if (group.kind == CharacterImageBatchKind.Expression && source.poses.Any(pose => !pose.parts.Any(part => part.id == matches[0])))
-            throw new AuthoringValidationException($"表情部位并非所有姿势共有；请先修复语义部位归属。");
+            throw new AuthoringValidationException($"This expression part is not shared by every pose. Fix the shared part ownership first.");
         return matches[0];
     }
     private static bool Same(

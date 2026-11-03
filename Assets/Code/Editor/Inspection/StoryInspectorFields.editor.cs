@@ -21,27 +21,14 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
     private readonly HashSet<string> m_multilineVisible = new(StringComparer.Ordinal);
     private readonly Dictionary<string, InspectorChoiceMenu> m_choices = new(StringComparer.Ordinal);
     private readonly HashSet<string> m_choiceVisible = new(StringComparer.Ordinal);
-    internal EditorTextView text { get; } = new(interactions);
 
     internal string? mergeKey => m_gesture?.mergeKey;
-    internal string Localize(string source) => text.Localize(source);
-    internal string Error(Exception error) => text.Error(error);
-    internal IEnumerable<(string id, string name)> BuiltIn(IEnumerable<(string id, string name)> choices) => text.BuiltIn(choices);
-    internal string Label(string source) => text.Label(source);
-    internal string Caption(
-        string source,
-        string translated
-    ) => text.Caption(source, translated);
-    internal string Format(
-        string source,
-        params object?[] arguments
-    ) => text.Format(source, arguments);
     internal bool Color(
         string id,
         string label,
         ref uint value
     ) {
-        bool changed = NovelColorField.Draw(text, id, label, ref value);
+        bool changed = NovelColorField.Draw( id, label, ref value);
         Observe(id, changed); return changed;
     }
     internal void BeginFrame() { m_active = false; m_nextTextActive = string.Empty; m_visible.Clear(); m_multilineVisible.Clear(); m_choiceVisible.Clear(); }
@@ -86,7 +73,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
     ) {
         string candidate = value;
         string original = value; bool changed = false, accepted = false;
-        EditorUiSession.current.widgets.PropertyRow(id, Localize(label), () =>
+        EditorUiSession.current.widgets.PropertyRow(id, label, () =>
         {
             if (m_textFocus == id) { ImGui.SetKeyboardFocusHere(); m_textFocus = string.Empty; }
             ImGui.InputText("##" + id, ref candidate, 32768);
@@ -120,7 +107,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         out bool continueDialogue
     ) {
         continueDialogue = false;
-        label = Localize(label);
+        label = label;
         m_multilineVisible.Add(id);
         string[] lines = Inno.VisualNovel.Authoring.Documents.ParagraphText.Lines(value);
         int active = Math.Clamp(m_paragraphs.GetValueOrDefault(id), 0, lines.Length - 1);
@@ -140,7 +127,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         }
         m_paragraphs[id] = active;
         string candidate = changed ? string.Join('\n', lines) : value;
-        if (ImGui.Button(text.Caption(Label("在当前行后换段##" + id), Label(text.Localize("在当前行后换段##") + id)))) insert = true;
+        if (ImGui.Button("Insert paragraph after current line##" + id)) insert = true;
         if (insert)
         {
             Finish(); candidate = Inno.VisualNovel.Authoring.Documents.ParagraphText.InsertAfter(candidate, active);
@@ -149,7 +136,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         if (!insert && lines.Length > 1 && lines[active].Length == 0)
         {
             ImGui.SameLine();
-            if (ImGui.Button(text.Caption(Label("删除当前空行##" + id), Label(text.Localize("删除当前空行##") + id))))
+            if (ImGui.Button("Remove current empty line##" + id))
             {
                 Finish(); candidate = Inno.VisualNovel.Authoring.Documents.ParagraphText.RemoveEmpty(candidate, active);
                 m_paragraphs[id] = Math.Max(0, active - 1); changed = true;
@@ -172,7 +159,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         m_visible.Add(id);
         bool valid = double.TryParse(candidate, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
             && double.IsFinite(parsed) && parsed >= minimum && parsed <= maximum;
-        if (!valid) EditorUiSession.current.widgets.Hint(Format("{0}：请输入 {1:G} 至 {2:G} 的有限数值。", Localize(label), minimum, maximum));
+        if (!valid) EditorUiSession.current.widgets.Hint(string.Format(System.Globalization.CultureInfo.InvariantCulture,"{0}: enter a finite number from {1:G} to {2:G}.", label, minimum, maximum));
         if (!edited || !valid) return false;
         value = parsed;
         return true;
@@ -188,7 +175,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         m_pending[id] = candidate;
         m_visible.Add(id);
         bool valid = long.TryParse(candidate, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed);
-        if (!valid) EditorUiSession.current.widgets.Hint(label + text.Localize("：请输入有效的 64 位整数。"));
+        if (!valid) EditorUiSession.current.widgets.Hint(label + ": enter a valid 64-bit integer.");
         if (!edited || !valid) return false;
         value = parsed;
         return true;
@@ -201,7 +188,7 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
     ) {
         bool candidate = value;
         bool changed = false;
-        EditorUiSession.current.widgets.PropertyRow(id, Localize(label), () => changed = ImGui.Checkbox("##" + id, ref candidate));
+        EditorUiSession.current.widgets.PropertyRow(id, label, () => changed = ImGui.Checkbox("##" + id, ref candidate));
         if (changed) Finish();
         value = candidate;
         return changed;
@@ -217,9 +204,9 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         bool changed = false;
         var items = options.ToArray();
         m_choiceVisible.Add(id);
-        string preview = items.FirstOrDefault(item => item.id == candidate).name ?? (candidate.Length == 0 ? Localize("未分配") : "Missing · " + candidate);
+        string preview = items.FirstOrDefault(item => item.id == candidate).name ?? (candidate.Length == 0 ? "Unassigned" : "Missing · " + candidate);
         var widgets = EditorUiSession.current.widgets;
-        widgets.PropertyRow(id, Localize(label), () =>
+        widgets.PropertyRow(id, label, () =>
         {
             if (!widgets.BeginBoundedCombo("##" + id, preview)) return;
             try
@@ -227,10 +214,10 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
                 if (!m_choices.TryGetValue(id, out var menu)) m_choices.Add(id, menu = new());
                 if (items.Length > 16)
                 {
-                    ImGui.Text(Localize(text.Localize("搜索名称或标识")));
+                    ImGui.Text("Search name or ID");
                     string query = menu.search;
                     if (ImGui.InputText("##choice-filter/" + id, ref query, 512)) { menu.search = query; menu.page = 0; }
-                    if (query.Length > 0 && ImGui.SmallButton(text.Caption(Label("清除筛选##choice/" + id), Label(text.Localize("清除筛选##choice/") + id)))) { menu.search = string.Empty; menu.page = 0; }
+                    if (query.Length > 0 && ImGui.SmallButton("Clear filter##choice/" + id)) { menu.search = string.Empty; menu.page = 0; }
                 }
                 else { menu.search = string.Empty; menu.page = 0; }
                 foreach (var item in menu.Read(items))
@@ -238,12 +225,12 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
                     {
                         Finish(); candidate = item.id; changed = true;
                     }
-                if (menu.matches == 0) widgets.Hint(Localize(text.Localize("没有匹配的选项。当前值保持不变。")));
+                if (menu.matches == 0) widgets.Hint("No matching options. The current value is retained.");
                 if (menu.pages > 1)
                 {
-                    ImGui.Text(Format("第 {0}/{1} 页", menu.page + 1, menu.pages));
-                    if (menu.page > 0 && ImGui.SmallButton(text.Caption(Label("上一页##choice/" + id), Label(text.Localize("上一页##choice/") + id)))) menu.page--;
-                    if (menu.page + 1 < menu.pages && ImGui.SmallButton(text.Caption(Label("下一页##choice/" + id), Label(text.Localize("下一页##choice/") + id)))) menu.page++;
+                    ImGui.Text(string.Format(System.Globalization.CultureInfo.InvariantCulture,"Page {0} of {1}", menu.page + 1, menu.pages));
+                    if (menu.page > 0 && ImGui.SmallButton("Previous page##choice/" + id)) menu.page--;
+                    if (menu.page + 1 < menu.pages && ImGui.SmallButton("Next page##choice/" + id)) menu.page++;
                 }
             }
             finally { widgets.EndBoundedCombo(); }
@@ -272,6 +259,6 @@ internal sealed class StoryInspectorFields(EditorInteractions interactions)
         if (!changed) return;
         if (m_field != id) Finish();
         m_field = id;
-        m_gesture ??= new(interactions.history, Localize("编辑剧情参数"));
+        m_gesture ??= new(interactions.history, "Edit story parameter");
     }
 }

@@ -25,8 +25,8 @@ internal static class GameBuildFixture
         AssetPipeline assets
     ) {
         using var world = new SceneWorld(identities, types); using var scope = world.EnterScope();
-        var scene = new GameScene("VisualNovelAcceptance"); var owner = scene.CreateObject("Visual Novel Player");
-        var player = owner.AddComponent<NovelPlayerComponent>(); player.project = project;
+        var scene = new GameScene("VisualNovelAcceptance");
+        var player = scene.AddSystem<NovelSceneSystem>(); player.project = project;
         var captured = SceneAsset.Capture(scene, native, assets);
         var path = AssetPath.Project("Game/BuildStart.iscene");
         if (!EditorAssets.Save(path, captured)) throw new InvalidOperationException("The official scene importer did not save the build fixture.");
@@ -34,14 +34,14 @@ internal static class GameBuildFixture
         var restored = imported.Instantiate(native, assets);
         try
         {
-            var component = restored.GetObjects().Single().GetComponents<NovelPlayerComponent>().Single();
-            if (component.project?.identity.persistentId != project.identity.persistentId || component.gameObject?.scene != restored)
-                throw new InvalidOperationException("The native build scene lost its Scene -> GameObject -> component and game asset reference.");
+            var component = restored.GetSystems().OfType<NovelSceneSystem>().Single();
+            if (component.project?.identity.persistentId != project.identity.persistentId || component.owningScene != restored)
+                throw new InvalidOperationException("The native build scene lost its native Scene -> VN System and game asset reference.");
         }
         finally
         {
             foreach (var item in restored.GetObjects().ToArray()) restored.DestroyObject(item);
-            scene.DestroyObject(owner);
+            scene.RemoveSystem(player);
         }
         string report = Path.Combine(repository, "artifacts", "Reports", "GameBuildFixturePath.txt");
         File.WriteAllText(report, root);

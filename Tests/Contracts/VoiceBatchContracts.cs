@@ -113,7 +113,7 @@ internal static class VoiceBatchContracts
         File.Copy(Path.Combine(root, "Assets", "Recordings", "zhCN_Tone.wav"), Path.Combine(root, "Assets", "Recordings", "Duplicate", "zhCN_Tone.wav"));
         var ambiguous = service.Preview(draft, new(), NativeVoiceImports.ReadFolder(root, "Recordings"), "zhCN_", true);
         Check(!ambiguous.rows.Single(static item => item.node == "hello").applicable
-            && ambiguous.rows.Single(static item => item.node == "hello").message.Contains("不止一个", StringComparison.Ordinal), "Ambiguous filenames silently selected the first recording.");
+            && ambiguous.rows.Single(static item => item.node == "hello").message.Contains("Multiple recordings", StringComparison.Ordinal), "Ambiguous filenames silently selected the first recording.");
         rejected = false; try { NativeVoiceImports.ReadFolder(root, "../Outside"); } catch (ArgumentException) { rejected = true; }
         Check(rejected, "Recording lookup escaped the explicit project asset folder.");
         string export = NativeVoiceImports.Export(root, csv, ','); Check(export.StartsWith(root, StringComparison.OrdinalIgnoreCase) && File.ReadAllText(export) == csv, "Recording export left the test project or changed the exchange text.");

@@ -27,7 +27,7 @@ public static class VariableTableEditService
         VariableTableAsset table,
         string id
     ) {
-        if (!table.variables.Any(item => item.id == id)) throw new AuthoringValidationException($"共享变量不存在：{id}");
+        if (!table.variables.Any(item => item.id == id)) throw new AuthoringValidationException($"The shared variable does not exist: {id}");
         var values = table.variables.Where(item => item.id != id).Select(VariableValueRules.Copy).ToArray();
         Validate(table, values); table.variables = values;
     }

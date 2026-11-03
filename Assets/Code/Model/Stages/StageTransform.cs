@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using InnoEngine.Serialization;
 
 namespace Inno.VisualNovel.Model.Stages;
@@ -25,4 +27,10 @@ public sealed class StageTransform : ISerializable
     [SerializableProperty] public double rotation { get; set; }
     /// <summary>Gets or sets alpha multiplier.</summary>
     [SerializableProperty] public double opacity { get; set; } = 1;
+    /// <summary>Rejects nonfinite or unbounded placement values before applying a complete authoring operation.</summary>
+    public void Validate()
+    {
+        if (new[] { x, y, pivotX, pivotY, scaleX, scaleY, rotation, opacity }.Any(static value => !double.IsFinite(value) || Math.Abs(value) > 1e12)
+            || opacity is < 0 or > 1) throw new ArgumentException("Stage transform must be finite and bounded.");
+    }
 }

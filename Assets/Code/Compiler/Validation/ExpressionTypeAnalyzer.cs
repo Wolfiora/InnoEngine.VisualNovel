@@ -24,7 +24,7 @@ internal sealed class ExpressionTypeAnalyzer(IEnumerable<VariableDefinition> var
             return Of(expression.literal);
         if (expression.operation == ExpressionOperation.Variable)
             return m_types.TryGetValue(expression.variableId, out NovelValue? type) ? Of(type)
-                : throw new InvalidOperationException($"变量不存在：{expression.variableId}。");
+                : throw new InvalidOperationException($"The variable does not exist: {expression.variableId}.");
         Shape left = Describe(expression.operands[0], depth + 1);
         if (expression.operation == ExpressionOperation.Not)
             return left.kind == NovelValueKind.Boolean ? left : Fail("Not 需要布尔值。");

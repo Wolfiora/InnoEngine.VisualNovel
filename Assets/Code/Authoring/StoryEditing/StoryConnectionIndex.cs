@@ -38,5 +38,5 @@ internal sealed class StoryConnectionIndex
     internal GraphEdgeRecord Before(GraphNodeId id) => m_incoming[id].Single();
     internal GraphEdgeRecord After(GraphNodeId id) => m_outgoing[id].Single();
     internal string Fragment(GraphNodeId id) => m_fragments.TryGetValue(id, out var owners) && owners.Length == 1 ? owners[0]
-        : throw new AuthoringValidationException($"节点需要唯一片段归属。");
+        : throw new AuthoringValidationException($"Each node must belong to exactly one fragment.");
 }

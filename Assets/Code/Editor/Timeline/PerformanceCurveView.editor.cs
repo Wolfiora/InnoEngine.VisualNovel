@@ -19,10 +19,10 @@ internal sealed class PerformanceCurveView(
     internal bool Draw(PerformanceCurve curve)
     {
         double x1 = curve.x1, y1 = curve.y1, x2 = curve.x2, y2 = curve.y2;
-        bool changed = fields.Number("curve/x1", fields.Localize("第一个控制点 · 时间"), ref x1, 0, 1);
-        changed |= fields.Number("curve/y1", fields.Localize("第一个控制点 · 进度"), ref y1, 0, 1);
-        changed |= fields.Number("curve/x2", fields.Localize("第二个控制点 · 时间"), ref x2, 0, 1);
-        changed |= fields.Number("curve/y2", fields.Localize("第二个控制点 · 进度"), ref y2, 0, 1);
+        bool changed = fields.Number("curve/x1", "First control point · Time", ref x1, 0, 1);
+        changed |= fields.Number("curve/y1", "First control point · Progress", ref y1, 0, 1);
+        changed |= fields.Number("curve/x2", "Second control point · Time", ref x2, 0, 1);
+        changed |= fields.Number("curve/y2", "Second control point · Progress", ref y2, 0, 1);
         curve.x1 = x1; curve.y1 = y1; curve.x2 = x2; curve.y2 = y2;
         Vector2 origin = ImGui.GetCursorScreenPosition(), size = new(Math.Max(100, ImGui.GetContentRegionAvailable().X), 210);
         Vector2 top = origin + new Vector2(20), extent = size - new Vector2(40);
@@ -31,7 +31,7 @@ internal sealed class PerformanceCurveView(
         if (inside && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             float first = Vector2.Distance(mouse, Point(curve.x1, curve.y1)), second = Vector2.Distance(mouse, Point(curve.x2, curve.y2));
-            if (Math.Min(first, second) <= 12) { fields.Finish(); Finish(); m_handle = first <= second ? 1 : 2; m_drag = new(history, "编辑时间曲线"); }
+            if (Math.Min(first, second) <= 12) { fields.Finish(); Finish(); m_handle = first <= second ? 1 : 2; m_drag = new(history, "Edit time curve"); }
         }
         if (m_drag is not null)
         {
@@ -57,7 +57,7 @@ internal sealed class PerformanceCurveView(
         { double x = index / 64.0; Vector2 point = Point(x, PerformanceCurveEvaluator.Evaluate(curve, x)); draw.Line(previous, point, accent); previous = point; }
         draw.FilledCircle(Point(curve.x1, curve.y1), 6, ImGui.ToPackedColor(new(1, .75f, .4f, 1)));
         draw.FilledCircle(Point(curve.x2, curve.y2), 6, accent);
-        ImGui.Dummy(size); EditorUiSession.current.widgets.Hint(fields.Localize("拖动控制点，或输入 0–1 的数值。横向是时间，纵向是进度；Esc 取消整次拖动。"));
+        ImGui.Dummy(size); EditorUiSession.current.widgets.Hint("Drag a control point or enter values from 0 to 1. Time runs horizontally and progress vertically; Esc cancels the whole drag.");
         return changed;
     }
     internal void Finish() { m_drag?.Commit(); m_drag = null; }

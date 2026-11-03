@@ -58,7 +58,7 @@ internal static class PublishingContracts
             && report.issues.Count(static item => item.code == "VN-PUBLISH-SHADER") == 1,
             "Invalid content or missing native publication contracts appeared ready.");
         Check(report.ToMarkdown().Contains("发布\\|检查 测试", StringComparison.Ordinal)
-            && report.ToMarkdown().Contains("不是导出包体积", StringComparison.Ordinal), "The report confused serialized properties with release size or broke its Markdown table.");
+            && report.ToMarkdown().Contains("not package size", StringComparison.Ordinal), "The report confused serialized properties with release size or broke its Markdown table.");
         Directory.CreateDirectory(Path.Combine(assetRoot, "~Samples"));
         File.WriteAllBytes(Path.Combine(assetRoot, "~Samples", "Teaching.png"), UiPngImage.Encode(new(1, 1, new byte[] { 128, 255, 0, 255 })));
         TextureAsset sample = Assets.Assets.Load<TextureAsset>(AssetPath.Project("~Samples/Teaching.png"));

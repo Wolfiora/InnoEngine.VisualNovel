@@ -25,6 +25,33 @@ namespace Inno.VisualNovel.Authoring.AssetImporting;
 
 internal static class ImportAssetInspection
 {
+    internal static IReadOnlyList<AssetDependency> SourceDependencies(
+        AssetObject asset,
+        ReadOnlySpan<byte> source,
+        AssetSerializationServices services
+    ) => asset switch
+    {
+        NovelProjectAsset => Read<NovelProjectAsset>(source, services), StoryAsset => Read<StoryAsset>(source, services),
+        VariableTableAsset => Read<VariableTableAsset>(source, services), CharacterAsset => Read<CharacterAsset>(source, services),
+        StageAsset => Read<StageAsset>(source, services), PerformanceClipAsset => Read<PerformanceClipAsset>(source, services),
+        VisualEffectAsset => Read<VisualEffectAsset>(source, services), ScreenAsset => Read<ScreenAsset>(source, services),
+        ThemeAsset => Read<ThemeAsset>(source, services), AudioCueAsset => Read<AudioCueAsset>(source, services),
+        MaterialAsset => Read<MaterialAsset>(source, services),
+        CollectionAsset => Read<CollectionAsset>(source, services), LocalizationTableAsset => Read<LocalizationTableAsset>(source, services),
+        NovelCommandCatalogAsset => Read<NovelCommandCatalogAsset>(source, services),
+        UiActionCatalogAsset => Read<UiActionCatalogAsset>(source, services), UiDataSourceCatalogAsset => Read<UiDataSourceCatalogAsset>(source, services),
+        _ => Capture(asset, services).dependencies
+    };
+
+    private static IReadOnlyList<AssetDependency> Read<TAsset>(
+        ReadOnlySpan<byte> source,
+        AssetSerializationServices services
+    ) where TAsset : AssetObject
+    {
+        _ = NativeAssetSourceSerialization.Import<TAsset>(source, services, out var dependencies);
+        return dependencies;
+    }
+
     internal static (byte[] data, IReadOnlyList<AssetDependency> dependencies) Capture(
         AssetObject asset,
         AssetSerializationServices services
@@ -40,7 +67,7 @@ internal static class ImportAssetInspection
         TextureAsset value => (NativeAssetSourceSerialization.Export(value, services), []),
         FontAsset value => (NativeAssetSourceSerialization.Export(value, services), []),
         AudioClipAsset value => (NativeAssetSourceSerialization.Export(value, services), []),
-        _ => throw new AuthoringValidationException($"当前导入公开契约无法在不重复登记依赖的情况下检查该附加资源类型：{asset.assetPath}。需要导入上下文提供只读属性/依赖捕获；原始资源保持不变。")
+        _ => throw new AuthoringValidationException($"The importer cannot inspect this additional resource without registering dependencies twice: {asset.assetPath}. Read-only property/dependency capture is required. The original resource is preserved.")
     };
     private static (byte[] data, IReadOnlyList<AssetDependency> dependencies) Inspect<TAsset>(
         TAsset asset,

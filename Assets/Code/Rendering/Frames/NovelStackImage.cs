@@ -10,5 +10,7 @@ public sealed record NovelStackImage(IReadOnlyList<NovelImagePlan> layers) : Nov
 {
     /// <inheritdoc />
     public override IEnumerable<NovelDrawQuad> Paints() => layers.SelectMany(static item => item.Paints());
+    /// <inheritdoc />
+    public override IEnumerable<NovelDrawMesh> Meshes() => layers.SelectMany(static item => item.Meshes());
 }
 

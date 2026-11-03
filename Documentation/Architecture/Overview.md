@@ -17,7 +17,7 @@
 
 生产代码仅通过逻辑 namespace 引用公开 Scripting API。工具和契约测试通过明确选定的引擎公开宿主接口组合实际依赖。
 
-基础能力复用、Core 数学类型的取舍和 Scene → Object → Component 所有权详见 [引擎复用边界](EngineReuse.md)。游戏入口是原生 `NovelPlayerComponent : GameBehavior`，不是插件自己的场景或对象框架。
+基础能力复用、Core 数学类型的取舍和 Scene → Object → Component 所有权详见 [引擎复用边界](EngineReuse.md)。游戏入口是原生 `NovelSceneSystem : GameSystem`，不是插件自己的场景或对象框架。
 
 Editor 消费 Authoring 预览对象暴露的 Player 会话与 UI 类型，因此 `.iasmdef` 显式列出 Player 等公开类型所属程序集。正式 C# 编译不能依靠传递程序集引用解析公共签名；这没有增加程序集，也没有引入反向依赖或生产二进制旁路。所有定义仍由 Bootstrap 使用引擎原生源服务生成。
 

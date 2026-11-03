@@ -16,7 +16,7 @@ public static class UiOptionEditService
         UiElementDefinition element,
         NovelValue? defaultValue = null
     ) {
-        if (element.kind != UiElementKind.Selector || element.options.Length >= 1000) throw new AuthoringValidationException($"选择器最多 1000 项。");
+        if (element.kind != UiElementKind.Selector || element.options.Length >= 1000) throw new AuthoringValidationException($"A selector supports at most 1,000 options.");
         element.options = [.. element.options, new() { id = Guid.NewGuid().ToString("N"), textId = Guid.NewGuid().ToString("N"), text = "新选项", value = defaultValue?.Copy() ?? NovelValue.String("新值") }];
     }
     /// <summary>Replaces the option set from a declared enum while retaining unchanged members' text identities.</summary>
@@ -26,7 +26,7 @@ public static class UiOptionEditService
         UiElementDefinition element,
         VariableDefinition variable
     ) {
-        if (element.kind != UiElementKind.Selector || variable.initialValue.kind != NovelValueKind.Enum) throw new AuthoringValidationException($"需要选择器和 Enum 变量。");
+        if (element.kind != UiElementKind.Selector || variable.initialValue.kind != NovelValueKind.Enum) throw new AuthoringValidationException($"Select a selector control and an Enum variable.");
         element.options = variable.members.Select(member =>
         {
             var previous = element.options.FirstOrDefault(option => option.value.kind == NovelValueKind.Enum && option.value.text == member);

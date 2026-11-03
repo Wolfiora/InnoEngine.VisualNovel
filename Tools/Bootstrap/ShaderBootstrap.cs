@@ -16,7 +16,18 @@ internal static class ShaderBootstrap
     internal static void Ensure(
         AssetPipeline assets,
         SerializationRegistry serialization
-    ) { Build(assets, serialization, false); Build(assets, serialization, true); }
+    ) {
+        Build(assets, serialization, false); Build(assets, serialization, true);
+        EnsureMaterial("NovelSurface"); EnsureMaterial("NovelPostProcess");
+        void EnsureMaterial(string name)
+        {
+            var path = AssetPath.Project("BuiltIn/Shaders/Materials/" + name + ".imaterial");
+            if (System.IO.File.Exists(System.IO.Path.Combine(assets.assetRoot, path.localPath))) return;
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(assets.assetRoot, "BuiltIn", "Shaders", "Materials"));
+            var material = new MaterialAsset { shader = assets.Load<ShaderAsset>(AssetPath.Project("BuiltIn/Shaders/Graphs/" + name + ".ishader")) };
+            if (!EditorAssets.Save(path, material)) throw new InvalidOperationException("VN default material did not import: " + path);
+        }
+    }
 
     private static void Build(
         AssetPipeline assets,

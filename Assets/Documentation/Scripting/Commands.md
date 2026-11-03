@@ -5,7 +5,7 @@
 ## 注册与创作
 
 1. 在当前代际的 `NovelCommandRegistry` 注册独立 handler 工厂；构造与 definition 读取不能产生副作用。
-2. 在首次创建会话前调用 `NovelPlayerComponent.ConfigureCommands`，或将注册表传入 `NovelSession`。
+2. 在首次创建会话前调用 `NovelSceneSystem.ConfigureCommands`，或将注册表传入 `NovelSession`。
 3. 扩展作者在 Editor scope 通过 `NovelCommandPublishing.Publish` 将元数据发布为项目内原生目录；工厂、CLR Type 和委托不进入目录。
 4. 创作者把目录关联到游戏，在图或剧本中添加自定义指令并应用表单。参数复用类型化表达式，不提供另一套脚本语言。
 5. 有返回值时选择兼容的目标变量；允许取消的指令必须连接 cancel 输出。

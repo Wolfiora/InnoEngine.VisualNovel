@@ -9,11 +9,11 @@ internal static class UiStyleValueFields
 {
     internal static string Label(UiStyleProperty property) => property switch
     {
-        UiStyleProperty.Background => "普通背景", UiStyleProperty.Hover => "悬停背景", UiStyleProperty.Pressed => "按下背景",
-        UiStyleProperty.Disabled => "禁用背景", UiStyleProperty.Foreground => "文字颜色", UiStyleProperty.DisabledForeground => "禁用文字",
-        UiStyleProperty.ImageTint => "图片着色", UiStyleProperty.Focus => "焦点边框", UiStyleProperty.FontSize => "字号",
-        UiStyleProperty.LineSpacing => "行距倍率", UiStyleProperty.TextPadding => "文字内边距", UiStyleProperty.Opacity => "不透明度",
-        UiStyleProperty.Alignment => "文字对齐", _ => throw new ArgumentOutOfRangeException(nameof(property))
+        UiStyleProperty.Background => "Normal background", UiStyleProperty.Hover => "Hover background", UiStyleProperty.Pressed => "Pressed background",
+        UiStyleProperty.Disabled => "Disabled background", UiStyleProperty.Foreground => "Text color", UiStyleProperty.DisabledForeground => "Disabled text",
+        UiStyleProperty.ImageTint => "Image tint", UiStyleProperty.Focus => "Focus border", UiStyleProperty.FontSize => "Font size",
+        UiStyleProperty.LineSpacing => "Line spacing multiplier", UiStyleProperty.TextPadding => "Text padding", UiStyleProperty.Opacity => "Opacity",
+        UiStyleProperty.Alignment => "Text alignment", _ => throw new ArgumentOutOfRangeException(nameof(property))
     };
     internal static UiStyleProperty Draw(
         StoryInspectorFields fields,

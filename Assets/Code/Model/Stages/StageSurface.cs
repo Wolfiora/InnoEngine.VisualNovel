@@ -47,5 +47,5 @@ public sealed class StageSurface : ISerializable
     private static bool Region(
         double start,
         double length
-    ) => double.IsFinite(start) && double.IsFinite(length) && start >= 0 && length >= 0 && start + length <= 1;
+    ) => double.IsFinite(start) && double.IsFinite(length) && start >= 0 && length >= 0 && start + length <= 1 + 1e-7;
 }

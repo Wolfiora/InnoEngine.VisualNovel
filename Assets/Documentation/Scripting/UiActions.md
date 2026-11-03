@@ -8,7 +8,7 @@
 2. 在“VN 游戏设置”关联这个目录，动作声明会独立复制到游戏定义。更改目录后需要重新关联。
 3. 在界面设计器选择游戏，点击“使用所选游戏的变量与动作”。在控件点击动作菜单选择自定义动作。
 4. 使用类型化固定参数，或选择参数字段；字段优先于固定值。列表只能使用目录默认列表或类型化列表字段，不解析文本列表。
-5. 在原生 `NovelPlayerComponent` 创建会话前调用 `ConfigureUiActions`；该注册表属于当前组件/代际，不是全局发现表。当前正式 Runtime API 没有类型发现入口，必须显式注册。
+5. 在原生 `NovelSceneSystem` 创建会话前调用 `ConfigureUiActions`；该注册表属于当前组件/代际，不是全局发现表。当前正式 Runtime API 没有类型发现入口，必须显式注册。
 
 `Assets/~Samples/ScriptExtension/SetPageCountAction.cs.txt` 展示一个简单处理器。将示例复制为项目正常 `Assets` 下的 `.cs` 后使用。该示例要求目标页面声明 Game Integer 字段 `count`。
 

@@ -9,7 +9,7 @@ namespace Inno.VisualNovel.Authoring.AssetAuditing.Licenses;
 public sealed class ResourceLicenseCatalogAsset : AssetObject
 {
     /// <summary>Gets or sets the author-facing catalog title.</summary>
-    [SerializableProperty] public string title { get; set; } = "资源授权记录";
+    [SerializableProperty] public string title { get; set; } = "Resource license records";
     /// <summary>Gets or sets unique native asset provenance records, including work-in-progress metadata.</summary>
     [SerializableProperty] public ResourceLicenseEntry[] entries { get; set; } = [];
 }
