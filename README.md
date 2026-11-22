@@ -1,15 +1,44 @@
 # InnoEngine.VisualNovel
 
-InnoEngine 的独立源码视觉小说插件。当前方向是原生 Scene / GameObject / Component 制作、引擎 UI、节点图与剧本双主创作、精细演出与完整发布流程。
+InnoEngine 的视觉小说插件集合。仓库本身不是插件，而是一组 `InnoPlugin.VisualNovel.*` 源码插件；普通用户只需安装主插件 `InnoPlugin.VisualNovel`（导出时可内嵌全部依赖），子插件也可以单独导出复用。
 
-本仓库正在按完整设计分阶段实施。实际可用功能、验证证据与外部接口缺口见 [实施状态](Documentation/ImplementationStatus.md)，未完成的功能不作为当前能力宣传。
+> 当前阶段只有仓库与插件骨架，尚未实现任何功能。
 
-**2026-11-03：原生场景重构尚未完成。** 英文编辑器、真实场景/UI 组件、引擎 UI 后端、无代码页面导航与列表翻页已有正式编译和行为证据；最新完整回归 260 通过，十程序集检查通过。候选插件已安装到 TestProject 与 NeonZero，两个实际工程的场景、原生 UI/舞台及剧情路线检查通过；详情和包指纹见 [消费工程报告](Documentation/Specifications/NativeConsumerAcceptance.md)。全部 Play 表现、原生页面/主题及对象存档迁移仍有剩余。Windows 成品构建被当前 SDK/Support Pack 接口不匹配阻止；本轮未操作桌面或做 GUI/GPU 验收。
+## 插件
 
-以下保留重构前的功能基线，不代表这些功能已全部迁入原生场景制作流程。
+| 插件 | pluginId | 依赖 | 职责 |
+| --- | --- | --- | --- |
+| [InnoPlugin.VisualNovel](Plugins/InnoPlugin.VisualNovel/README.md) | `innoplugin.visualnovel` | Narrative、Stage、UI | 主插件：`NovelDirectorSystem` 与 VN 规则、制作面板 |
+| [InnoPlugin.VisualNovel.Narrative](Plugins/InnoPlugin.VisualNovel.Narrative/README.md) | `innoplugin.visualnovel.narrative` | 无 | 叙事图、剧本编译与无画面执行器 |
+| [InnoPlugin.VisualNovel.Stage](Plugins/InnoPlugin.VisualNovel.Stage/README.md) | `innoplugin.visualnovel.stage` | 无 | 原生 Scene 中的分层 2D 舞台渲染与过渡 |
+| [InnoPlugin.VisualNovel.UI](Plugins/InnoPlugin.VisualNovel.UI/README.md) | `innoplugin.visualnovel.ui` | 无 | 游戏内 UI 控件、布局、文本呈现与输入导航 |
 
-当前已实施共享图/剧本、卡片/紧凑/阅读稿与可见区域布局、原生共享变量库与 23 类指令、C# 命令、单焦点交互式并行、分支变量写入与审阅式剧本换序、富文本与五种阅读布局、角色变体/批量差分/独立语音、舞台源区域/裁剪/枢轴/混合/遮罩、时间线与粒子生命周期曲线、转场和屏幕效果参数轨道、自有 UI 与组件复用、提示说明/层级编辑/画布缩放吸附对齐、UI 事件动画/页面退场/共享时间线轨道、按住快进/阅读快捷键设置、页面状态、CG 多图视口、严格内容/代码匹配存档、原生回滚预算与准确帧缩略图、多语言图片/字体链与静态缺字检查、收藏、音乐鉴赏及隔离回想。最近完整行为基线为 244 项通过，包含舞台批量编辑、阅读组合键、单行输入编辑、游戏选择器搜索/滚动条、大字号适配与限时选项显示。正式编译和十程序集检查通过，最新插件/干净消费复验是 240 检查点，不能代表后续源码分发。既有 D3D11 离线 Shader 证据有效。编辑器资源已原生生成/重读 2,247 对审核文本；余下展示路径继续核对。实际最新证据和缺口以实施状态为准。
+## 仓库结构
 
-内置资源含 3 主题/54 页面、7 组件、68 图标、6 背景、2 分层角色（各 2 姿势/6 表情）、20 动作、8 粒子、12 转场、10 屏幕效果、20 UI 音效和 3 段循环音频。五组原生教学图、三种项目起点、分类浏览、正式链预览和可编辑副本已接通；高级创作、完整上手体验与游戏发布仍未齐，Runtime 原生根序列化仍有公开 API 缺口，当前不是完整 v1。视频和流媒体留待未来引擎 backend；本批次没有 Computer Use、GUI 或实机验收。
+```text
+InnoEngine.VisualNovel/
+├── Plugins/                       每个子目录是一个独立的 Inno 源码插件工程
+│   └── InnoPlugin.VisualNovel.X/
+│       ├── Settings.Project.inno  工程身份（projectId = pluginId），引擎生成
+│       ├── README.md              职责与边界
+│       └── Assets/                唯一内容根，原样进入 .iplugin
+│           ├── Runtime/           游戏 + 编辑器编译（Runtime / Authoring API）
+│           └── Editor/            仅编辑器编译（Editor API）
+├── Sandbox/                       开发宿主工程，安装全部插件后在 Editor 中联调
+├── Documentation/
+│   ├── Architecture.md            架构、依赖方向与引擎缺口
+│   └── Development.md             开发流
+├── Tools/
+│   ├── Plugins.psd1               插件清单与依赖（唯一声明处）
+│   └── Build-Plugins.ps1          按依赖顺序调用引擎导出器
+├── .editorconfig                  沿用 InnoEngine code-format
+└── global.json                    与引擎相同的 .NET SDK
+```
 
-操作文档：[上手](Assets/Documentation/Start/README.md)、[效果](Assets/Documentation/Authoring/ImageEffects.md)、[玩家数据](Assets/Documentation/Authoring/PlayerProfiles.md)、[调试](Assets/Documentation/Authoring/Debugging.md)、[曲线](Assets/Documentation/Authoring/Curves.md)、[音频裁剪](Assets/Documentation/Authoring/AudioEditing.md)、[配音](Assets/Documentation/Authoring/VoiceManagement.md)、[发布检查](Assets/Documentation/Publishing/Preflight.md)。
+## 开始
+
+见 [开发流](Documentation/Development.md) 与 [架构](Documentation/Architecture.md)。
+
+## 许可
+
+[Apache-2.0](LICENSE)

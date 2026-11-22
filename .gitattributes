@@ -1,0 +1,8 @@
+# Keep authored text consistent on every checkout host.
+* text=auto eol=lf
+
+# Inno serialized documents and sidecars are binary.
+*.inno binary
+*.imeta binary
+*.iasmdef binary
+*.iplugin binary
